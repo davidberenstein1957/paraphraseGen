@@ -3,12 +3,11 @@ import argparse
 
 import numpy as np
 import torch as t
+from selfModules.neg import NEG_loss
 from torch.autograd import Variable
 from torch.optim import SGD
-
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
-from selfModules.neg import NEG_loss
 
 if __name__ == '__main__':
 
@@ -19,26 +18,25 @@ if __name__ == '__main__':
                         help='batch size (default: 10)')
     parser.add_argument('--num-sample', type=int, default=5, metavar='NS',
                         help='num sample (default: 5)')
-    parser.add_argument('--use-cuda', type=bool, default=True, metavar='CUDA',
-                        help='use cuda (default: True)')
+    parser.add_argument('--use-cuda', type=bool, default=False, metavar='CUDA',
+                        help='use cuda (default: False)')
     args = parser.parse_args()
 
-
-    path=''
+    path = ''
 
     data_files = [path + 'data/train.txt',
-                       path + 'data/test.txt']
+                  path + 'data/test.txt']
 
     idx_files = [path + 'data/words_vocab.pkl',
-                      path + 'data/characters_vocab.pkl']
+                 path + 'data/characters_vocab.pkl']
 
     tensor_files = [[path + 'data/train_word_tensor.npy',
-                          path + 'data/valid_word_tensor.npy'],
-                         [path + 'data/train_character_tensor.npy',
-                          path + 'data/valid_character_tensor.npy']]
+                     path + 'data/valid_word_tensor.npy'],
+                    [path + 'data/train_character_tensor.npy',
+                     path + 'data/valid_character_tensor.npy']]
 
     batch_loader = BatchLoader(data_files, idx_files, tensor_files, path)
-    
+
     # batch_loader = BatchLoader('')
     params = Parameters(batch_loader.max_word_len,
                         batch_loader.max_seq_len,
@@ -46,6 +44,7 @@ if __name__ == '__main__':
                         batch_loader.chars_vocab_size)
 
     neg_loss = NEG_loss(params.word_vocab_size, params.word_embed_size)
+
     if args.use_cuda:
         neg_loss = neg_loss.cuda()
 
@@ -72,5 +71,5 @@ if __name__ == '__main__':
             print('iteration = {}, loss = {}'.format(iteration, out))
 
     word_embeddings = neg_loss.input_embeddings()
-    #Saves the word embeddings at the end of this programs
+    # Saves the word embeddings at the end of this programs
     np.save('data/word_embeddings.npy', word_embeddings)
