@@ -24,6 +24,7 @@ class RVAE(nn.Module):
         self.encoder_original = Encoder(self.params)
         self.encoder_paraphrase = Encoder(self.params_2)
 
+        # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
         #
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
