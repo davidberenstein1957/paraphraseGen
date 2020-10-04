@@ -10,7 +10,7 @@ from utils.parameters import Parameters
 from model.rvae import RVAE
 
 if __name__ == "__main__":
-
+    print('')
     if not os.path.exists('data/word_embeddings.npy'):
         raise FileNotFoundError("word embeddings file was't found")
 #一次一句，这样容易看，一次两个词
