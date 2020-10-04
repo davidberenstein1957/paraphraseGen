@@ -125,14 +125,13 @@ if __name__ == "__main__":
 
     for iteration in range(args.num_iterations):
         #This needs to be changed ##这一步必须保证不大于训练数据数量-每一批数据的大小，否则越界报错######################
-        start_index =  (start_index+1)%(49999-args.batch_size)
+        start_index = (start_index+args.batch_size)%(modulo_operator)
         #start_index = (start_index+args.batch_size)%149163 #计算交叉熵损失，等
         
         coef = kld_coef(iteration, coef_modulo)
         
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
        
-        
         if ((iteration % coef_modulo == 0) & (iteration != 0)):
             print('\n')
             print('------------TRAIN-------------')
