@@ -244,6 +244,7 @@ class BatchLoader:
 #         print indexes
 #         print '-------------------------------'
 
+        indexes = [index % len(self.word_tensor[target]) for index in indexes]
         encoder_word_input = [self.word_tensor[target][index] for index in indexes]
         
 #         print 'Printing encoder_word_input ------------->'

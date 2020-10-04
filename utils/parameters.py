@@ -2,7 +2,7 @@ from .functional import *
 
 
 class Parameters:
-    def __init__(self, max_word_len, max_seq_len, word_vocab_size, char_vocab_size):
+    def __init__(self, max_word_len, max_seq_len, word_vocab_size, char_vocab_size, attn_model):
         #     max_word_length,max_sentence_length, 
         self.max_word_len = int(max_word_len)
         self.max_seq_len = int(max_seq_len) + 1  # go or eos token
@@ -23,3 +23,5 @@ class Parameters:
 
         self.decoder_rnn_size = 600
         self.decoder_num_layers = 2
+
+        self.attn_model = attn_model

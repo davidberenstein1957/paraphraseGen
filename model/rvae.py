@@ -12,14 +12,14 @@ from .encoder import Encoder
 
 
 class RVAE(nn.Module):
-    def __init__(self, params, params_2):
+    def __init__(self, params, params_2, path):
         super(RVAE, self).__init__()
 
         self.params = params
         self.params_2 = params_2  # Encoder-2 parameters
 
-        self.embedding = Embedding(self.params, '')
-        self.embedding_2 = Embedding(self.params_2, '', True)
+        self.embedding = Embedding(self.params, path)
+        self.embedding_2 = Embedding(self.params_2, path, True)
 
         self.encoder_original = Encoder(self.params)
         self.encoder_paraphrase = Encoder(self.params_2)
@@ -119,7 +119,7 @@ class RVAE(nn.Module):
         return [p for p in self.parameters() if p.requires_grad]
 
     def trainer(self, optimizer, batch_loader, batch_loader_2):
-        def train(i, batch_size, use_cuda, dropout, start_index):
+        def train(coef, batch_size, use_cuda, dropout, start_index):
             input = batch_loader.next_batch(batch_size, 'train', start_index)
             input = [Variable(t.from_numpy(var)) for var in input]
             input = [var.long() for var in input]
@@ -159,13 +159,13 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            loss = 79 * cross_entropy + kld_coef(i) * kld  # 79应该是作者拍脑袋的
+            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
             optimizer.step()  # 反向跟新梯度
 
-            return cross_entropy, kld, kld_coef(i)  # 交叉熵，kl-devergence，kld-coef是为了让他
+            return cross_entropy, kld, coef # 交叉熵，kl-devergence，kld-coef是为了让他
 
         return train
 

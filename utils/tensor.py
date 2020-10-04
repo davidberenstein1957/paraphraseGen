@@ -7,6 +7,7 @@ from six.moves import cPickle
 
 from .functional import *
 
+
 idx_files = ['data/words_vocab.pkl',
                       'data/characters_vocab.pkl']
 

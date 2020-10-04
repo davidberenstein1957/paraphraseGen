@@ -26,6 +26,19 @@ def handle_inputs(inputs, use_cuda):
 
     return result
 
-def kld_coef(i):
+# https://github.com/haofuml/cyclical_annealing/blob/master/plot/plot_schedules.ipynb
+def kld_coef(iteration, coef_modulo):
     import math
-    return (math.tanh((i - 3500)/1000) + 1)/2
+
+    if coef_modulo == 0:
+        return (math.tanh((iteration - 3500)/350) + 1)/2
+
+    try:
+        test = math.floor(iteration / coef_modulo)
+    except:
+        test = 0
+
+    if test % 2 == 0:
+        return (math.tanh(((iteration % coef_modulo) - 3500)/350) + 1)/2 
+    else:
+        return 1
