@@ -7,7 +7,7 @@ from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder
+from .decoder import Decoder, AttnDecoder
 from .encoder import Encoder
 
 
@@ -30,7 +30,10 @@ class RVAE(nn.Module):
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
         # self.encoder_3 = Encoder(self.params)
-        self.decoder = Decoder(self.params_2)  # change this to params_2
+        if self.params.attn_model is not None:
+            self.decoder = AttnDecoder(self.params_2)
+        else:
+            self.decoder = Decoder(self.params_2)  # change this to params_2
 
     def forward(self, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,
@@ -76,14 +79,15 @@ class RVAE(nn.Module):
             [batch_size_2, _] = encoder_word_input_2.size()
 
             encoder_input_2 = self.embedding_2(encoder_word_input_2, encoder_character_input_2)
+            
 
             ''' ==================================================================================================================================
             '''
 
-            context, h_0, c_0 = self.encoder_original(encoder_input, None)
-
-            State = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
-            context_2, _, _ = self.encoder_paraphrase(encoder_input_2, State)  # Encoder_2 for Ques_2  接下去跟释义句编码
+            enc_out_original, context, h_0, c_0 = self.encoder_original(encoder_input, None)
+            state_original = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
+            enc_out_paraphrase, context_2, h_0, c_0 = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
+            state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 原始句子编码
 
             mu = self.context_to_mu(context_2)
             logvar = self.context_to_logvar(context_2)
@@ -98,8 +102,7 @@ class RVAE(nn.Module):
             kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
             # encoder_input = self.embedding(encoder_word_input, encoder_character_input)
-            # _ , h_0 , c_0 = self.encoder_3(encoder_input, None)
-            initial_state = State  # Final state of Encoder-1
+            # enc_out_original_attention, h_0 , c_0 = self.encoder_original_attn(encoder_input, None, enc_out_paraphrase)
 
         else:
             kld = None
@@ -108,8 +111,7 @@ class RVAE(nn.Module):
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
-        out, final_state = self.decoder(decoder_input_2, z, drop_prob,
-                                        initial_state)           # Take a look at the decoder
+        out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)           # Take a look at the decoder
 
         return out, final_state, kld, mu, std
 
@@ -271,7 +273,7 @@ class RVAE(nn.Module):
 
         encoder_input = self.embedding(encoder_word_input, encoder_character_input)
 
-        _, h0, c0 = self.encoder_original(encoder_input, None)
+        encoder_output, _, h0, c0 = self.encoder_original(encoder_input, None)
         State = (h0, c0)
 
         # print '----------------------'
@@ -280,11 +282,11 @@ class RVAE(nn.Module):
         # print '----------------------'
 
         # State = None
-        results, scores = self.sample_beam(batch_loader_2, seq_len, seed, use_cuda, State, beam_size, n_best)
+        results, scores = self.sample_beam(batch_loader_2, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output)
 
         return results, scores
 
-    def sample_beam(self, batch_loader, seq_len, seed, use_cuda, State, beam_size, n_best):
+    def sample_beam(self, batch_loader, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output):
         # seed = Variable(t.from_numpy(seed).float())
         if use_cuda:
             seed = seed.cuda()
@@ -339,7 +341,7 @@ class RVAE(nn.Module):
             # print trg_emb.size()
             # print seed.size()
 
-            trg_h, dec_states = self.decoder.only_decoder_beam(trg_emb, seed, drop_prob, dec_states)
+            trg_h, dec_states = self.decoder.only_decoder_beam(trg_emb, seed, drop_prob, encoder_output, dec_states)
 
             # trg_h, (trg_h_t, trg_c_t) = self.model.decoder(trg_emb, (dec_states[0].squeeze(0), dec_states[1].squeeze(0)), context )
 

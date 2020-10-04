@@ -45,7 +45,7 @@ class Encoder(nn.Module):
 
         ''' Unfold rnn with zero initial state and get its final state from the last layer
         '''
-        _, (transfer_state_1, final_state) = self.rnn(input, State) 
+        encoder_outputs, (transfer_state_1, final_state) = self.rnn(input, State) 
         """Inputs: input, (h_0, c_0)
         - **input** of shape `(seq_len, batch, input_size)`: tensor containing the features
           of the input sequence.
@@ -63,4 +63,4 @@ class Encoder(nn.Module):
         h_1, h_2 = final_state[0], final_state[1]
         final_state = t.cat([h_1, h_2], 1)
 
-        return final_state, transfer_state_1, transfer_state_2
+        return encoder_outputs, final_state, transfer_state_1, transfer_state_2

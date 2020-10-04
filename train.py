@@ -15,6 +15,7 @@ from model.rvae import RVAE
 
 if __name__ == "__main__":
     path='paraphraseGen/'
+    save_path='/content/drive/My Drive/thesis/'
     if not os.path.exists(path+'data/word_embeddings.npy'):
         raise FileNotFoundError("word embeddings file was't found")
 #一次一句，这样容易看，一次两个词
@@ -25,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
     parser.add_argument('--use-trained', type=bool, default=False)
-    parser.add_argument('--attn-model', type=bool, default=None)
+    parser.add_argument('--attn-model', type=bool, default=True)
 
     parser.add_argument('--use-file', type=bool, default=True)
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
@@ -154,9 +155,9 @@ if __name__ == "__main__":
         
 
         if ((iteration % coef_modulo == 0) & (iteration != 0)):
-            t.save(rvae.state_dict(), path+f'/trained_RVAE_{iteration}')
-            np.save(path+f'/ce_result_{iteration}.npy'.format(args.ce_result), np.array(ce_result))
-            np.save(path+f'/kld_result_npy_{iteration}'.format(args.kld_result), np.array(kld_result))
+            t.save(rvae.state_dict(), save_path+f'/trained_RVAE_{iteration}')
+            np.save(save_path+f'/ce_result_{iteration}.npy'.format(args.ce_result), np.array(ce_result))
+            np.save(save_path+f'/kld_result_npy_{iteration}'.format(args.kld_result), np.array(kld_result))
             print('MODEL SAVED')
 
     
