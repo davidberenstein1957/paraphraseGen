@@ -73,13 +73,13 @@ class ResidualDecoder(nn.Module):
 
         self.params = params
 
-        self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
+        self.rnn_test = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
                             hidden_size=self.params.decoder_rnn_size,
                             num_layers=self.params.decoder_num_layers,
                             batch_first=True,
                             bidirectional=False)
 
-        self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
+        self.rnn_1 = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
                            hidden_size=self.params.latent_variable_size + self.params.word_embed_size,
                            num_layers=self.params.decoder_num_layers,
                            batch_first=True,
@@ -111,14 +111,22 @@ class ResidualDecoder(nn.Module):
 
     # https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
     def residual_enrolling(self, decoder_input,  initial_state):
-
         [batch_size, seq_len, _] = decoder_input.size()
+        
         for sentence_id in range(batch_size):
+            h_0, c_0 = initial_state[0], initial_state[1]
             for word_id in range(seq_len):
                 word = decoder_input[word_id][sentence_id][:].view(1, 1, -1)
-                state = initial_state[:, sentence_id, :]
-                _, (h_n, c_n) = self.rnn(word, state)
+                state = (h_0[:, sentence_id, :], c_0[:, sentence_id, :])
+                print(decoder_input.size(), word.size(), state[0].size())
+                _, (h_n, c_n) = self.rnn_1(word, state)
+                h_n = torch.add(decoder_input, h_n)
                 rnn_out, final_state = self.rnn_2(h_n)
+                print(rnn_out.size(), final_state.size())
+
+        test_out, test_state = self.rnn_test(decoder_input, initial_state)
+
+        print(test_out.size(), test_state.size())
 
         return rnn_out, final_state
     

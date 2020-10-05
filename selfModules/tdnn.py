@@ -39,7 +39,7 @@ class TDNN(nn.Module):
         # leaps with shape
         x = x.view(-1, self.params.max_word_len, self.params.char_embed_size).transpose(1, 2).contiguous()
 
-        xs = [F.tanh(F.conv1d(x, kernel)) for kernel in self.kernels]
+        xs = [t.tanh(F.conv1d(x, kernel)) for kernel in self.kernels]
         xs = [x.max(2,keepdim=True)[0].squeeze(2) for x in xs]
 
         x = t.cat(xs, 1)

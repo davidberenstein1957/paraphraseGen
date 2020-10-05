@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -37,7 +38,7 @@ class Highway(nn.Module):
         """
         
         for layer in range(self.num_layers):
-            gate = F.sigmoid(self.gate[layer](x))
+            gate = t.sigmoid(self.gate[layer](x))
             #都是832*825的和x的维度一样
             nonlinear = self.f(self.nonlinear[layer](x))
             linear = self.linear[layer](x)
