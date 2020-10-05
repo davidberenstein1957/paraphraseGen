@@ -278,7 +278,7 @@ class RVAE(nn.Module):
 
         encoder_output, _, h0, c0 = self.encoder_original(encoder_input, None)
         State = (h0, c0)
-
+        
         # print '----------------------'
         # print 'Printing h0 ---------->'
         # print h0
@@ -317,7 +317,7 @@ class RVAE(nn.Module):
             dec_states[0].repeat(1, beam_size, 1),
             dec_states[1].repeat(1, beam_size, 1)
         ]
-
+        
         # print'========== After =================='
         # print "dec_states:", dec_states[0].size()
         # print "dec_states:", dec_states[1].size()
@@ -343,6 +343,7 @@ class RVAE(nn.Module):
 
             # print trg_emb.size()
             # print seed.size()
+            
 
             trg_h, dec_states = self.decoder.only_decoder_beam(trg_emb, seed, drop_prob, encoder_output, dec_states)
 
