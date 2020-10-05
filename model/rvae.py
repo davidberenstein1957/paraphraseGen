@@ -313,11 +313,12 @@ class RVAE(nn.Module):
         #     Variable(dec_states[0].repeat(1, beam_size, 1)),
         #     Variable(dec_states[1].repeat(1, beam_size, 1))
         # ]
+        
         dec_states = [
             dec_states[0].repeat(1, beam_size, 1),
             dec_states[1].repeat(1, beam_size, 1)
         ]
-        
+        print(State[0].size(), dec_states[0].size())
         # print'========== After =================='
         # print "dec_states:", dec_states[0].size()
         # print "dec_states:", dec_states[1].size()
@@ -334,7 +335,6 @@ class RVAE(nn.Module):
         remaining_sents = batch_size
 
         for i in range(seq_len):
-
             input = t.stack(
                 [b.get_current_state() for b in beam if not b.done]
             ).t().contiguous().view(1, -1)
