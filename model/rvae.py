@@ -7,7 +7,7 @@ from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder, AttnDecoder
+from .decoder import Decoder, AttnDecoder, ResidualDecoder
 from .encoder import Encoder
 
 
@@ -33,7 +33,8 @@ class RVAE(nn.Module):
         if self.params.attn_model is not None:
             self.decoder = AttnDecoder(self.params_2)
         else:
-            self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
+            self.decoder = Decoder(self.params_2)
+            # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
 
     def forward(self, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,

@@ -74,6 +74,12 @@ class ResidualDecoder(nn.Module):
         self.params = params
 
         self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
+                            hidden_size=self.params.decoder_rnn_size,
+                            num_layers=self.params.decoder_num_layers,
+                            batch_first=True,
+                            bidirectional=False)
+
+        self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
                            hidden_size=self.params.latent_variable_size + self.params.word_embed_size,
                            num_layers=self.params.decoder_num_layers,
                            batch_first=True,
@@ -151,7 +157,7 @@ class ResidualDecoder(nn.Module):
 
 class AttnDecoder(nn.Module):
     def __init__(self, params):
-        super(AttnDecoder).__init__()
+        super(AttnDecoder, self).__init__()
         # self.attn = nn.Linear(hidden_size, hidden_size)
         self.params = params
         self.attn = nn.Linear(self.params.decoder_rnn_size, self.params.decoder_rnn_size)
