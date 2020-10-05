@@ -113,6 +113,9 @@ class ResidualDecoder(nn.Module):
     def residual_enrolling(self, decoder_input,  initial_state):
         [batch_size, seq_len, _] = decoder_input.size()
         
+        output_words = t.empty(decoder_input.size(), requires_grad=True)
+        h_0_states = t.empty(decoder_input.size(), requires_grad=True)
+        c_0_states = t.empty(decoder_input.size(), requires_grad=True)
         h_0, c_0 = initial_state[0], initial_state[1]
         for sentence_id in range(batch_size):
             state = (h_0[:, sentence_id, :].unsqueeze(1).contiguous(), c_0[:, sentence_id, :].unsqueeze(1).contiguous())
@@ -123,13 +126,20 @@ class ResidualDecoder(nn.Module):
                 # print(word.size(), h_n[-1,:,:].size(), state[0].size())
                 h_n = t.add(word, h_n[-1,:,:].unsqueeze(1))
                 # print(h_n.size())
-                
                 rnn_out, final_state = self.rnn_2(h_n)
-        print(rnn_out.size(), final_state[0].size())
+                output_words[sentence_id, word_id] = rnn_out
+                h_0_states[sentence_id, word_id] = final_state[0]
+                c_0_states[sentence_id, word_id] = final_state[1]
+        
+        rnn_out = output_words
+        final_state = (h_0_states, c_0_states)
+        
+        # print(output_words.size(), rnn_out.size(), final_state[0].size())
 
         test_out, test_state = self.rnn_test(decoder_input, initial_state)
 
-        print(test_out.size(), test_state[0].size())
+        print(rnn_out.size(), test_out.size())
+        print(rnn_out, test_out)
 
         return rnn_out, final_state
     
