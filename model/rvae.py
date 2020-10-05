@@ -87,8 +87,10 @@ class RVAE(nn.Module):
 
             enc_out_original, context, h_0, c_0 = self.encoder_original(encoder_input, None)
             state_original = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
+            # state_original = context
             enc_out_paraphrase, context_2, h_0, c_0 = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
             state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 原始句子编码
+            # state_paraphrase = context_2
 
             mu = self.context_to_mu(context_2)
             logvar = self.context_to_logvar(context_2)
