@@ -105,41 +105,37 @@ class ResidualDecoder(nn.Module):
         z = z.unsqueeze(0)
         z = t.cat([z] * beam_batch_size, 0)
         decoder_input = t.cat([decoder_input, z], 2)
-        rnn_out, final_state = self.rnn(decoder_input, initial_state)
+        rnn_out, final_state = self.residual_unrolling_in_the_deep(decoder_input,  initial_state)
 
         return rnn_out, final_state
 
     # https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
-    def residual_enrolling(self, decoder_input,  initial_state):
+    def residual_unrolling_in_the_deep(self, decoder_input,  initial_state):
         [batch_size, seq_len, _] = decoder_input.size()
         
-        output_words = t.empty(decoder_input.size(), requires_grad=True)
-        h_0_states = t.empty(decoder_input.size(), requires_grad=True)
-        c_0_states = t.empty(decoder_input.size(), requires_grad=True)
+        output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
+        h_0_states = t.empty(decoder_input.size(), requires_grad=True).cuda()
+        c_0_states = t.empty(decoder_input.size(), requires_grad=True).cuda()
         h_0, c_0 = initial_state[0], initial_state[1]
         for sentence_id in range(batch_size):
             state = (h_0[:, sentence_id, :].unsqueeze(1).contiguous(), c_0[:, sentence_id, :].unsqueeze(1).contiguous())
+            print(state[0].size())
             for word_id in range(seq_len):
                 word = decoder_input[sentence_id, word_id, :].view(1, 1, -1)
-                # print(decoder_input.size(), word.size(), state[0].size())
                 _, (h_n, c_n) = self.rnn_1(word, state)
-                # print(word.size(), h_n[-1,:,:].size(), state[0].size())
                 h_n = t.add(word, h_n[-1,:,:].unsqueeze(1))
-                # print(h_n.size())
                 rnn_out, final_state = self.rnn_2(h_n)
+
                 output_words[sentence_id, word_id] = rnn_out
                 h_0_states[sentence_id, word_id] = final_state[0]
                 c_0_states[sentence_id, word_id] = final_state[1]
-        
+
         rnn_out = output_words
+        
         final_state = (h_0_states, c_0_states)
         
-        # print(output_words.size(), rnn_out.size(), final_state[0].size())
-
-        test_out, test_state = self.rnn_test(decoder_input, initial_state)
-
-        print(rnn_out.size(), test_out.size())
-        print(rnn_out, test_out)
+        
+        # test_out, test_state = self.rnn_test(decoder_input, initial_state)
 
         return rnn_out, final_state
     
@@ -168,7 +164,7 @@ class ResidualDecoder(nn.Module):
         z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
         decoder_input = t.cat([decoder_input, z], 2)
 
-        rnn_out, final_state = self.residual_enrolling(decoder_input, initial_state)
+        rnn_out, final_state = self.residual_unrolling_in_the_deep(decoder_input, initial_state)
         rnn_out = rnn_out.contiguous().view(-1, self.params.decoder_rnn_size)
 
         result = self.fc(rnn_out)
