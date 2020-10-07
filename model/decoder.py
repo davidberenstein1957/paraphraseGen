@@ -2,7 +2,9 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.functional import parameters_allocation_check
-
+from torchqrnn import QRNN
+import warnings
+warnings.filterwarnings("ignore")
 
 class Decoder(nn.Module):
     def __init__(self, params):
@@ -10,11 +12,16 @@ class Decoder(nn.Module):
 
         self.params = params
 
-        self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
-                           hidden_size=self.params.decoder_rnn_size,
-                           num_layers=self.params.decoder_num_layers,
-                           batch_first=True,
-                           bidirectional=False)
+        # self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
+        #                    hidden_size=self.params.decoder_rnn_size,
+        #                    num_layers=self.params.decoder_num_layers,
+        #                    batch_first=True,
+        #                    bidirectional=False)
+        
+        self.rnn = QRNN(self.params.latent_variable_size + self.params.word_embed_size,
+                        self.params.decoder_rnn_size,
+                        num_layers=self.params.decoder_num_layers,
+                        dropout=0.4)
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
 
@@ -30,9 +37,21 @@ class Decoder(nn.Module):
         z = z.unsqueeze(0)
         z = t.cat([z] * beam_batch_size, 0)
         decoder_input = t.cat([decoder_input, z], 2)
-        rnn_out, final_state = self.rnn(decoder_input, initial_state)
+        decoder_input = t.cat([decoder_input, z], 2)
+
+        rnn_out, final_state = self.fix_for_qrnn(decoder_input, initial_state)
 
         return rnn_out, final_state
+
+    def fix_for_qrnn(self, decoder_input, initial_state):
+        decoder_input = decoder_input.transpose(0,1)
+        initial_state = (initial_state[0].transpose(0,1), initial_state[1].transpose(0,1))
+        rnn_out, final_state = self.rnn(decoder_input, initial_state)
+        decoder_input = decoder_input.transpose(0,1)
+        initial_state = (initial_state[0].transpose(0,1), initial_state[1].transpose(0,1))
+        
+        return rnn_out, final_state
+
 
     def forward(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
         """
@@ -58,7 +77,9 @@ class Decoder(nn.Module):
 
         z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
         decoder_input = t.cat([decoder_input, z], 2)
-        rnn_out, final_state = self.rnn(decoder_input, initial_state)
+        
+        rnn_out, final_state = self.fix_for_qrnn(decoder_input, initial_state)
+        
         rnn_out = rnn_out.contiguous().view(-1, self.params.decoder_rnn_size)
 
         result = self.fc(rnn_out)
