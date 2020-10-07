@@ -11,7 +11,9 @@ from torch.autograd import Variable
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
 from utils.functional import *
+# from model.rvae_previous import RVAE
 from model.rvae import RVAE
+
 
 if __name__ == "__main__":
     path='paraphraseGen/'
@@ -32,9 +34,9 @@ if __name__ == "__main__":
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
     parser.add_argument('--train-file', type=str, default= path+'/data/train.txt')
 
-    parser.add_argument('--num-sample', type=int, default=5)
+    parser.add_argument('--num-sample', type=int, default=1)
     parser.add_argument('--beam-top', type=int, default=1)
-    parser.add_argument('--beam-size', type=int, default=10)
+    parser.add_argument('--beam-size', type=int, default=1)
 
     parser.add_argument('--ce-result', default='')
     parser.add_argument('--kld-result', default='')
