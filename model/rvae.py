@@ -318,7 +318,7 @@ class RVAE(nn.Module):
             dec_states[0].repeat(1, beam_size, 1),
             dec_states[1].repeat(1, beam_size, 1)
         ]
-        print(State[0].size(), dec_states[0].size())
+        
         # print'========== After =================='
         # print "dec_states:", dec_states[0].size()
         # print "dec_states:", dec_states[1].size()
