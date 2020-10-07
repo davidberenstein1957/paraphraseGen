@@ -43,8 +43,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
-    
     
     ''' =================== Creating batch_loader for encoder-1 =========================================
     '''
@@ -153,14 +151,12 @@ if __name__ == "__main__":
             print(coef)
             print('------------------------------')
         
-
         if ((iteration % coef_modulo == 0) & (iteration != 0)):
             t.save(rvae.state_dict(), save_path+f'/trained_RVAE_{iteration}')
             np.save(save_path+f'/ce_result_{iteration}.npy'.format(args.ce_result), np.array(ce_result))
             np.save(save_path+f'/kld_result_npy_{iteration}'.format(args.kld_result), np.array(kld_result))
             print('MODEL SAVED')
 
-    
         if ((iteration % int(coef_modulo/10) == 0)):
             index = randint(0, len(data)-1)
 
