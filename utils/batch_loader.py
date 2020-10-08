@@ -82,10 +82,10 @@ class BatchLoader:
         
 
         self.blind_symbol = ''
-        self.pad_token = '<p>'
+        self.pad_token = '_'
         self.go_token = '<s>'
         self.end_token = '</s>'
-        self.unk_token = '<u>'
+        # self.unk_token = '<u>'
 
         idx_exists = fold(f_and,
                           [os.path.exists(file) for file in self.idx_files],
@@ -144,7 +144,7 @@ class BatchLoader:
     def build_character_vocab(self, data):
 
         # unique characters with blind symbol
-        chars = list(set(data)) + [self.blind_symbol, self.pad_token, self.go_token, self.end_token, self.unk_token]
+        chars = list(set(data)) + [self.blind_symbol, self.pad_token, self.go_token, self.end_token]
         chars_vocab_size = len(chars)
 
         # mappings itself
@@ -160,7 +160,7 @@ class BatchLoader:
 
         # Mapping from index to word
         idx_to_word = [x[0] for x in word_counts.most_common()]
-        idx_to_word = list(sorted(idx_to_word)) + [self.pad_token, self.go_token, self.end_token, self.unk_token]
+        idx_to_word = list(sorted(idx_to_word)) + [self.pad_token, self.go_token, self.end_token]
 
         words_vocab_size = len(idx_to_word)
 
