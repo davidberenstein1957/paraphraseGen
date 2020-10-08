@@ -19,6 +19,7 @@ class Decoder(nn.Module):
                            bidirectional=False)
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
+        nn.init.xavier_normal(self.fc.weight)
 
     def only_decoder_beam(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
 
@@ -97,6 +98,7 @@ class AttnDecoder(nn.Module):
         '''
             decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
         '''
+        print(decoder_input.size())
         decoder_input = F.dropout(decoder_input, drop_prob)
         z = z.unsqueeze(0)
         z = t.cat([z] * beam_batch_size, 0)
@@ -122,7 +124,7 @@ class AttnDecoder(nn.Module):
             'Invalid CUDA options. Parameters should be allocated in the same memory'
 
         [batch_size, seq_len, _] = decoder_input.size()
-
+        
         '''
             decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
         '''
@@ -324,11 +326,12 @@ class ResidualDecoder(nn.Module):
 
         self.rnn_2 = nn.LSTM(input_size=self.params.decoder_rnn_size,
                            hidden_size=self.params.decoder_rnn_size,
-                           num_layers=1,
+                           num_layers=self.params.decoder_num_layers,
                            batch_first=True,
                            bidirectional=False)
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
+        nn.init.xavier_normal(self.fc.weight)
 
     def only_decoder_beam(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
 
@@ -342,12 +345,23 @@ class ResidualDecoder(nn.Module):
         z = z.unsqueeze(0)
         z = t.cat([z] * beam_batch_size, 0)
         decoder_input = t.cat([decoder_input, z], 2)
-        rnn_out, final_state = self.residual_unrolling_in_the_deep(decoder_input,  initial_state, False)
+        rnn_out, final_state = self.batch_residual_unrolling(decoder_input,  initial_state, False)
 
         return rnn_out, final_state
 
+    def batch_residual_unrolling(self, decoder_input,  initial_state, x=None):
+        [batch_size, seq_len, _] = decoder_input.size()
+        for word_id in range(seq_len):
+            input = decoder_input[:,word_id,:]
+            rnn_out, (h_n, c_n) = self.rnn_1(input, initial_state)
+            h_n_new = t.add(word, h_n[-1,:,:].unsqueeze(1)).cuda()
+            rnn_out, initial_state = self.rnn_2(h_n_new)
+
+        return rnn_out, initial_state
+
     # https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
     def residual_unrolling_in_the_deep(self, decoder_input,  initial_state, step=True):
+        
         [batch_size, seq_len, _] = decoder_input.size()
         output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
         h_0_states = t.empty(initial_state[0].size(), requires_grad=True).cuda()
@@ -397,7 +411,7 @@ class ResidualDecoder(nn.Module):
         z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
         decoder_input = t.cat([decoder_input, z], 2)
 
-        rnn_out, final_state = self.residual_unrolling_in_the_deep(decoder_input, initial_state)
+        rnn_out, final_state = self.batch_residual_unrolling(decoder_input, initial_state)
         rnn_out = rnn_out.contiguous().view(-1, self.params.decoder_rnn_size)
 
         result = self.fc(rnn_out)

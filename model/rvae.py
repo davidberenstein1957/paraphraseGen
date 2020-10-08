@@ -30,10 +30,10 @@ class RVAE(nn.Module):
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
         # self.encoder_3 = Encoder(self.params)
-        if self.params.attn_model is not None:
-            self.decoder = Decoder(self.params_2)
+        if self.params.attn_model:
+            self.decoder = AttnDecoder(self.params_2)
         else:
-            self.decoder = Decoder(self.params_2)
+            self.decoder = ResidualDecoder(self.params_2)
             # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
 
     def forward(self, unk_idx, drop_prob,

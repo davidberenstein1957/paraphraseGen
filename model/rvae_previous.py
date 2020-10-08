@@ -121,7 +121,8 @@ class RVAE(nn.Module):
         # decoder_input_2 = decoder_input_2.transpose(0,1)
 
         #tensor to store decoder outputs
-        out = t.zeros(trg_len, batch_size, self.decoder.params.word_vocab_size).cuda()
+        src_len+=1
+        out = t.zeros(src_len, batch_size, self.decoder.params.word_vocab_size, requires_grad=True).cuda()
         
         input_words = self.embedding_2.word_embed(decoder_word_input_2)
         [batch_size, seq_len, _] = input_words.size()
@@ -131,7 +132,8 @@ class RVAE(nn.Module):
         
         # print(input_words.size())
         final_state = state_original
-        for word_id in range(0, trg_len):
+
+        for word_id in range(0, src_len):
             input = input_words[:,word_id,:]
             #insert input token embedding, previous hidden state, all encoder hidden states 
             #  and mask
@@ -156,8 +158,7 @@ class RVAE(nn.Module):
             # input_words = self.embedding_2.word_embed(top1)
             # print(input_words.size())
         out = out.transpose(0, 1)
-        print(out.size())
-        print(out)
+
         return out, final_state, kld, mu, std
 
     def learnable_parameters(self):
@@ -201,9 +202,10 @@ class RVAE(nn.Module):
                                         z=None)
             
             # logits = logits.view(-1, self.params.word_vocab_size)
-            logits = logits.view(-1, self.params_2.word_vocab_size)
+            logits = logits.contiguous().view(-1, self.params_2.word_vocab_size)
             target = target.view(-1)
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
+            
             cross_entropy = F.cross_entropy(logits, target)
 
             loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
@@ -314,7 +316,7 @@ class RVAE(nn.Module):
         input = [Variable(t.from_numpy(var)) for var in input]
         input = [var.long() for var in input]
         input = [var.cuda() if use_cuda else var for var in input]
-        [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target] = input
+        [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target, src_mask] = input
 
         encoder_input = self.embedding(encoder_word_input, encoder_character_input)
 
@@ -327,11 +329,11 @@ class RVAE(nn.Module):
         # print '----------------------'
 
         # State = None
-        results, scores = self.sample_beam(batch_loader_2, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output)
+        results, scores = self.sample_beam(src_mask, batch_loader_2, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output)
 
         return results, scores
 
-    def sample_beam(self, batch_loader, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output):
+    def sample_beam(self, mask, batch_loader, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output):
         # seed = Variable(t.from_numpy(seed).float())
         if use_cuda:
             seed = seed.cuda()
@@ -386,8 +388,7 @@ class RVAE(nn.Module):
             # print trg_emb.size()
             # print seed.size()
             
-
-            trg_h, dec_states = self.decoder.only_decoder_beam(trg_emb, seed, drop_prob, encoder_output, dec_states)
+            trg_h, dec_states = self.decoder.only_decoder_beam(mask, trg_emb, seed, drop_prob, encoder_output, dec_states)
 
             # trg_h, (trg_h_t, trg_c_t) = self.model.decoder(trg_emb, (dec_states[0].squeeze(0), dec_states[1].squeeze(0)), context )
 
