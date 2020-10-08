@@ -43,7 +43,7 @@ class Embedding(nn.Module):
             for i in range(batch_size):
                 for j in range(seq_len):
                     if random.random() < drop_prob:
-                        word_input[i,j] = 0
+                        word_input[i,j] = unk_idx
         
         word_input = self.word_embed(word_input)
         #character_input 将字母变成字母的embedding，然后拼接在一起，作为一个词的 字母一级别的embedding
