@@ -351,17 +351,18 @@ class ResidualDecoder(nn.Module):
 
     def batch_residual_unrolling(self, decoder_input,  initial_state, x=None):
         [batch_size, seq_len, _] = decoder_input.size()
+        output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
         for word_id in range(seq_len):
-            input = decoder_input[:,word_id,:]
+            input = decoder_input[:,word_id,:].unsqueeze(1)
             rnn_out, (h_n, c_n) = self.rnn_1(input, initial_state)
-            h_n_new = t.add(word, h_n[-1,:,:].unsqueeze(1)).cuda()
+            h_n_new = t.add(input, h_n[-1,:,:].unsqueeze(1)).cuda()
             rnn_out, initial_state = self.rnn_2(h_n_new)
+            output_words[:, word_id] = rnn_out.squeeze(1)
 
-        return rnn_out, initial_state
+        return output_words, initial_state
 
     # https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
     def residual_unrolling_in_the_deep(self, decoder_input,  initial_state, step=True):
-        
         [batch_size, seq_len, _] = decoder_input.size()
         output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
         h_0_states = t.empty(initial_state[0].size(), requires_grad=True).cuda()
@@ -370,9 +371,9 @@ class ResidualDecoder(nn.Module):
         for sentence_id in range(batch_size):
             state = (h_0[:, sentence_id, :].unsqueeze(1).contiguous(), c_0[:, sentence_id, :].unsqueeze(1).contiguous())
             for word_id in range(seq_len):
-                word = decoder_input[sentence_id, word_id, :].view(1, 1, -1)
+                words = decoder_input[sentence_id, word_id, :].view(1, 1, -1)
                 rnn_out, (h_n, c_n) = self.rnn_1(word, state)
-                h_n_new = t.add(word, h_n[-1,:,:].unsqueeze(1))
+                h_n_new = t.add(words, h_n[-1,:,:].unsqueeze(1))
                 rnn_out, final_state = self.rnn_2(h_n_new.cuda())
                 output_words[sentence_id, word_id] = rnn_out.cuda()
         
