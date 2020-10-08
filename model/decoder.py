@@ -2,7 +2,7 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.functional import parameters_allocation_check
-from torchqrnn import QRNN
+# from torchqrnn import QRNN
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -32,7 +32,6 @@ class Decoder(nn.Module):
         z = z.unsqueeze(0)
         z = t.cat([z] * beam_batch_size, 0)
         decoder_input = t.cat([decoder_input, z], 2)
-        decoder_input = t.cat([decoder_input, z], 2)
 
         rnn_out, final_state = self.rnn(decoder_input, initial_state)
 
@@ -72,79 +71,79 @@ class Decoder(nn.Module):
 
         return result, final_state
 
-class DecoderQRNN(nn.Module):
-    def __init__(self, params):
-        super(DecoderQRNN, self).__init__()
+# class DecoderQRNN(nn.Module):
+#     def __init__(self, params):
+#         super(DecoderQRNN, self).__init__()
 
-        self.params = params
+#         self.params = params
         
-        self.rnn = QRNN(self.params.latent_variable_size + self.params.word_embed_size,
-                        self.params.decoder_rnn_size,
-                        num_layers=1,
-                        dropout=0.4)
+#         self.rnn = QRNN(self.params.latent_variable_size + self.params.word_embed_size,
+#                         self.params.decoder_rnn_size,
+#                         num_layers=1,
+#                         dropout=0.4)
 
-        self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
+#         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
 
-    def only_decoder_beam(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
+#     def only_decoder_beam(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
 
-        assert parameters_allocation_check(self), \
-            'Invalid CUDA options. Parameters should be allocated in the same memory'
-        [beam_batch_size, _, _] = decoder_input.size()
-        '''
-            decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
-        '''
-        decoder_input = F.dropout(decoder_input, drop_prob)
-        z = z.unsqueeze(0)
-        z = t.cat([z] * beam_batch_size, 0)
-        decoder_input = t.cat([decoder_input, z], 2)
-        decoder_input = t.cat([decoder_input, z], 2)
+#         assert parameters_allocation_check(self), \
+#             'Invalid CUDA options. Parameters should be allocated in the same memory'
+#         [beam_batch_size, _, _] = decoder_input.size()
+#         '''
+#             decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
+#         '''
+#         decoder_input = F.dropout(decoder_input, drop_prob)
+#         z = z.unsqueeze(0)
+#         z = t.cat([z] * beam_batch_size, 0)
+#         decoder_input = t.cat([decoder_input, z], 2)
+#         decoder_input = t.cat([decoder_input, z], 2)
 
-        rnn_out, final_state = self.fix_for_qrnn(decoder_input, initial_state)
+#         rnn_out, final_state = self.fix_for_qrnn(decoder_input, initial_state)
 
-        return rnn_out, final_state
+#         return rnn_out, final_state
 
-    def fix_for_qrnn(self, decoder_input, initial_state):
-        decoder_input = decoder_input.transpose(0,1)
-        print(initial_state[0].size())
-        rnn_out, final_state = self.rnn(decoder_input, initial_state)
-        decoder_input = rnn_out.transpose(0,1)
+#     def fix_for_qrnn(self, decoder_input, initial_state):
+#         decoder_input = decoder_input.transpose(0,1)
+#         print(initial_state[0].size())
+#         rnn_out, final_state = self.rnn(decoder_input, initial_state)
+#         decoder_input = rnn_out.transpose(0,1)
         
-        return rnn_out, final_state
+#         return rnn_out, final_state
 
 
-    def forward(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
-        """
-        :param decoder_input: tensor with shape of [batch_size, seq_len, embed_size]
-        :param z: sequence context with shape of [batch_size, latent_variable_size]
-        :param drop_prob: probability of an element of decoder input to be zeroed in sense of dropout
-        :param initial_state: initial state of decoder rnn
+#     def forward(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
+#         """
+#         :param decoder_input: tensor with shape of [batch_size, seq_len, embed_size]
+#         :param z: sequence context with shape of [batch_size, latent_variable_size]
+#         :param drop_prob: probability of an element of decoder input to be zeroed in sense of dropout
+#         :param initial_state: initial state of decoder rnn
 
-        :return: unnormalized logits of sentense words distribution probabilities
-                    with shape of [batch_size, seq_len, word_vocab_size]
-                 final rnn state with shape of [num_layers, batch_size, decoder_rnn_size]
-        """
+#         :return: unnormalized logits of sentense words distribution probabilities
+#                     with shape of [batch_size, seq_len, word_vocab_size]
+#                  final rnn state with shape of [num_layers, batch_size, decoder_rnn_size]
+#         """
 
-        assert parameters_allocation_check(self), \
-            'Invalid CUDA options. Parameters should be allocated in the same memory'
+#         assert parameters_allocation_check(self), \
+#             'Invalid CUDA options. Parameters should be allocated in the same memory'
 
-        [batch_size, seq_len, _] = decoder_input.size()
+#         [batch_size, seq_len, _] = decoder_input.size()
 
-        '''
-            decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
-        '''
-        decoder_input = F.dropout(decoder_input, drop_prob)
+#         '''
+#             decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
+#         '''
+#         decoder_input = F.dropout(decoder_input, drop_prob)
 
-        z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
-        decoder_input = t.cat([decoder_input, z], 2)
+#         z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
+#         decoder_input = t.cat([decoder_input, z], 2)
         
-        rnn_out, final_state = self.fix_for_qrnn(decoder_input, initial_state)
+#         rnn_out, final_state = self.fix_for_qrnn(decoder_input, initial_state)
         
-        rnn_out = rnn_out.contiguous().view(-1, self.params.decoder_rnn_size)
+#         rnn_out = rnn_out.contiguous().view(-1, self.params.decoder_rnn_size)
 
-        result = self.fc(rnn_out)
-        result = result.view(batch_size, seq_len, self.params.word_vocab_size)
+#         result = self.fc(rnn_out)
+#         result = result.view(batch_size, seq_len, self.params.word_vocab_size)
 
-        return result, final_state
+#         return result, final_state
 
 
 class ResidualDecoder(nn.Module):

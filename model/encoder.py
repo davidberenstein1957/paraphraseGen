@@ -1,7 +1,7 @@
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
-from torchqrnn import QRNN
+# from torchqrnn import QRNN
 
 from selfModules.highway import Highway
 from utils.functional import parameters_allocation_check
@@ -67,8 +67,6 @@ class EndoderQRNN(nn.Module):
           for each `t`. If a :class:`torch.nn.utils.rnn.PackedSequence` has been
           given as the input, the output will also be a packed sequence.
         """
-        encoder_outputs
-        print(encoder_outputs.size(), final_state.size())
         
         return encoder_outputs, final_state
 
@@ -85,15 +83,6 @@ class Encoder(nn.Module):
                            num_layers=self.params.encoder_num_layers,
                            batch_first=True,
                            bidirectional=True)
-
-    def fix_for_qrnn(self, decoder_input, initial_state):
-        decoder_input = decoder_input.transpose(0,1)
-        initial_state = (initial_state[0].transpose(0,1), initial_state[1].transpose(0,1))
-        rnn_out, final_state = self.rnn(decoder_input, initial_state[0])
-        decoder_input = rnn_out.transpose(0,1)
-        final_state = (final_state[0].transpose(0,1), final_state[1].transpose(0,1))
-        
-        return rnn_out, final_state
 
     def forward(self, input, State):
         """
@@ -136,9 +125,6 @@ class Encoder(nn.Module):
         final_state = final_state.view(self.params.encoder_num_layers, 2, batch_size, self.params.encoder_rnn_size)
         final_state = final_state[-1]
         h_1, h_2 = final_state[0], final_state[1]
-        final_state = t.cat([h_1, h_2], 1)
-
-        print(encoder_outputs.size(), final_state.size())
-        
+        final_state = t.cat([h_1, h_2], 1)        
 
         return encoder_outputs, final_state, transfer_state_1, transfer_state_2
