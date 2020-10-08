@@ -36,7 +36,7 @@ class RVAE(nn.Module):
             self.decoder = Decoder(self.params_2)
             # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
 
-    def forward(self, drop_prob,
+    def forward(self, unk_idx, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,
                 encoder_word_input_2=None, encoder_character_input_2=None,
                 decoder_word_input_2=None, decoder_character_input_2=None,
@@ -73,13 +73,13 @@ class RVAE(nn.Module):
             '''  # 把word和character拼接成一个向量
             [batch_size, _] = encoder_word_input.size()
 
-            encoder_input = self.embedding(encoder_word_input, encoder_character_input)
+            encoder_input = self.embedding(encoder_word_input, encoder_character_input, unk_idx, drop_prob)
 
             ''' ===================================================Doing the same for encoder-2===================================================
             '''
             [batch_size_2, _] = encoder_word_input_2.size()
 
-            encoder_input_2 = self.embedding_2(encoder_word_input_2, encoder_character_input_2)
+            encoder_input_2 = self.embedding_2(encoder_word_input_2, encoder_character_input_2, unk_idx, drop_prob)
             
 
             ''' ==================================================================================================================================
@@ -147,12 +147,13 @@ class RVAE(nn.Module):
             # decoder_word_input, decoder_character_input是 释义句xp加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是释义句xp加结束符后面加若干占位符
             [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target] = input_2
+            unk_idx = batch_loader_2.word_to_idx[batch_loader_2.unk_token]
 
             ''' ================================================================================================================================
             '''
             # exit()
             # 这里encoder-input是原始句子xo的输入（句子翻转），encoder-input2是释义句xp的输入（句子翻转），decoder-input是释义句加加开始符号
-            logits, _, kld, _, _ = self(dropout,
+            logits, _, kld, _, _ = self(unk_idx, dropout,
                                         encoder_word_input, encoder_character_input,
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,
@@ -194,8 +195,8 @@ class RVAE(nn.Module):
 
             ''' ==================================================================================================================================
             '''
-
-            logits, _, kld, _, _ = self(0.,
+            unk_idx = batch_loader_2.word_to_idx[batch_loader_2.unk_token]
+            logits, _, kld, _, _ = self(unk_idx, 0.,
                                         encoder_word_input, encoder_character_input,
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,

@@ -231,7 +231,7 @@ class BatchLoader:
         # indexes = np.array([10])
 
         # print '-----------------Printing ? identity----------------------'
-        unk_token = self.word_to_idx[self.unk_token]
+        # unk_token = self.word_to_idx[self.unk_token]
         # print temp
         # print 'DONE!'
         # exit()
@@ -266,7 +266,6 @@ class BatchLoader:
         for i, line in enumerate(decoder_word_input):# 后面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
-            # line = [word if random.random()<0.75 else unk_token for word in line]
             decoder_word_input[i] = line + [self.word_to_idx[self.pad_token]] * to_add
 
         for i, line in enumerate(decoder_character_input):# 后面补齐pad-token

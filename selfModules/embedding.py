@@ -2,6 +2,7 @@
 import numpy as np
 import torch as t
 import torch.nn as nn
+import random
 from torch.nn import Parameter
 
 from .tdnn import TDNN
@@ -26,7 +27,7 @@ class Embedding(nn.Module):
 
         self.TDNN = TDNN(self.params)
 
-    def forward(self, word_input, character_input):
+    def forward(self, word_input, character_input, unk_idx=None, drop_prob=None):
         """
         :param word_input: [batch_size, seq_len] tensor of Long type
         :param character_input: [batch_size, seq_len, max_word_len] tensor of Long type
@@ -36,10 +37,14 @@ class Embedding(nn.Module):
         assert word_input.size()[:2] == character_input.size()[:2], \
             'Word input and character input must have the same sizes, but {} and {} found'.format(
                 word_input.size(), character_input.size())
-
+        
         [batch_size, seq_len] = word_input.size()
-        print(word_input)
-        print(ws)
+        if unk_idx is not None:
+            for i in range(batch_size):
+                for j in range(seq_len):
+                    if random.random() < drop_prob:
+                        word_input[i,j] = 0
+        
         word_input = self.word_embed(word_input)
         #character_input 将字母变成字母的embedding，然后拼接在一起，作为一个词的 字母一级别的embedding
         character_input = character_input.view(-1, self.params.max_word_len)
