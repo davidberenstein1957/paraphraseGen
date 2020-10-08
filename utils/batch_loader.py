@@ -3,6 +3,7 @@
 import collections
 import os
 import re
+import random
 
 import numpy as np
 from six.moves import cPickle
@@ -81,10 +82,10 @@ class BatchLoader:
         
 
         self.blind_symbol = ''
-        self.pad_token = '_'
-        self.go_token = '>'
-        self.end_token = '|'
-        self.a_token = '?'
+        self.pad_token = '<p>'
+        self.go_token = '<s>'
+        self.end_token = '</s>'
+        self.unk_token = '<u>'
 
         idx_exists = fold(f_and,
                           [os.path.exists(file) for file in self.idx_files],
@@ -119,6 +120,7 @@ class BatchLoader:
         '''
             Tokenization/string cleaning for all datasets except for SST.
             Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data
+        
         '''
 
         string = re.sub(r"[^가-힣A-Za-z0-9(),!?:;.\'\`]", " ", string)
@@ -142,7 +144,7 @@ class BatchLoader:
     def build_character_vocab(self, data):
 
         # unique characters with blind symbol
-        chars = list(set(data)) + [self.blind_symbol, self.pad_token, self.go_token, self.end_token]
+        chars = list(set(data)) + [self.blind_symbol, self.pad_token, self.go_token, self.end_token, self.unk_token]
         chars_vocab_size = len(chars)
 
         # mappings itself
@@ -158,7 +160,7 @@ class BatchLoader:
 
         # Mapping from index to word
         idx_to_word = [x[0] for x in word_counts.most_common()]
-        idx_to_word = list(sorted(idx_to_word)) + [self.pad_token, self.go_token, self.end_token]
+        idx_to_word = list(sorted(idx_to_word)) + [self.pad_token, self.go_token, self.end_token, self.unk_token]
 
         words_vocab_size = len(idx_to_word)
 
@@ -222,14 +224,14 @@ class BatchLoader:
 
         self.just_words = [word for line in self.word_tensor[0] for word in line]
 
-    def next_batch(self, batch_size, target_str,start_index):
+    def next_batch(self, batch_size, target_str, start_index):
 #         target = 0 if target_str == 'train' else 1
         target=0
         # indexes = np.array(np.random.randint(self.num_lines[target], size=batch_size))
         # indexes = np.array([10])
 
         # print '-----------------Printing ? identity----------------------'
-        # temp = self.word_to_idx[self.a_token]
+        unk_token = self.word_to_idx[self.unk_token]
         # print temp
         # print 'DONE!'
         # exit()
@@ -264,6 +266,7 @@ class BatchLoader:
         for i, line in enumerate(decoder_word_input):# 后面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
+            # line = [word if random.random()<0.75 else unk_token for word in line]
             decoder_word_input[i] = line + [self.word_to_idx[self.pad_token]] * to_add
 
         for i, line in enumerate(decoder_character_input):# 后面补齐pad-token

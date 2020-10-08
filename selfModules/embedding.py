@@ -38,7 +38,8 @@ class Embedding(nn.Module):
                 word_input.size(), character_input.size())
 
         [batch_size, seq_len] = word_input.size()
-
+        print(word_input)
+        print(ws)
         word_input = self.word_embed(word_input)
         #character_input 将字母变成字母的embedding，然后拼接在一起，作为一个词的 字母一级别的embedding
         character_input = character_input.view(-1, self.params.max_word_len)

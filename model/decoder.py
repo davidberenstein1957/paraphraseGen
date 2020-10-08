@@ -57,6 +57,7 @@ class Decoder(nn.Module):
         '''
             decoder rnn is conditioned on context via additional bias = W_cond * z to every input token
         '''
+        
         decoder_input = F.dropout(decoder_input, drop_prob)
 
         z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
