@@ -7,7 +7,7 @@ from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder, ResidualDecoder, StackedAttentionLSTM
+from .decoder import Decoder, ResidualDecoder, AttnDecoder
 from .encoder import Encoder
 
 
@@ -31,9 +31,9 @@ class RVAE(nn.Module):
 
         # self.encoder_3 = Encoder(self.params)
         if self.params.attn_model is not None:
-            self.decoder = AttnDecoder(self.params_2)
+            self.decoder = Decoder(self.params_2)
         else:
-            self.decoder = StackedAttentionLSTM(self.params_2)
+            self.decoder = Decoder(self.params_2)
             # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
 
     def forward(self, unk_idx, drop_prob,
@@ -133,7 +133,7 @@ class RVAE(nn.Module):
             # 其中encoder_word_input, encoder_character_input是将 xo原始句输入倒过来前面加若干占位符，
             # decoder_word_input, decoder_character_input是 xo原始句加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是xo原始句加结束符后面加若干占位符
-            [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target] = input
+            [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target, _] = input
 
             ''' =================================================== Input for Encoder-2 ========================================================
             '''
@@ -146,7 +146,7 @@ class RVAE(nn.Module):
             # 其中encoder_word_input, encoder_character_input是将 释义句xp输入倒过来前面加若干占位符，
             # decoder_word_input, decoder_character_input是 释义句xp加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是释义句xp加结束符后面加若干占位符
-            [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target] = input_2
+            [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target, _] = input_2
             unk_idx = batch_loader_2.word_to_idx[batch_loader_2.unk_token]
 
             ''' ================================================================================================================================
@@ -273,7 +273,7 @@ class RVAE(nn.Module):
         input = [Variable(t.from_numpy(var)) for var in input]
         input = [var.long() for var in input]
         input = [var.cuda() if use_cuda else var for var in input]
-        [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target] = input
+        [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target, _] = input
 
         encoder_input = self.embedding(encoder_word_input, encoder_character_input)
 

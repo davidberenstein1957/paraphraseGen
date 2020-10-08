@@ -2,12 +2,13 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
+import random
 from beam_search import Beam
 from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder, ResidualDecoder, StackedAttentionLSTM
+from .decoder import Decoder, ResidualDecoder, AttnDecoder
 from .encoder import Encoder
 
 
@@ -33,10 +34,10 @@ class RVAE(nn.Module):
         if self.params.attn_model is not None:
             self.decoder = AttnDecoder(self.params_2)
         else:
-            self.decoder = StackedAttentionLSTM(self.params_2)
+            self.decoder = Decoder(self.params_2)
             # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
 
-    def forward(self, unk_idx, drop_prob,
+    def forward(self, src_mask, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,
                 encoder_word_input_2=None, encoder_character_input_2=None,
                 decoder_word_input_2=None, decoder_character_input_2=None,
@@ -72,14 +73,14 @@ class RVAE(nn.Module):
             ''' Get context from encoder and sample z ~ N(mu, std)
             '''  # 把word和character拼接成一个向量
             [batch_size, trg_len] = encoder_word_input.size()
-
-            encoder_input = self.embedding(encoder_word_input, encoder_character_input, unk_idx, drop_prob)
+            
+            encoder_input = self.embedding(encoder_word_input, encoder_character_input, None, drop_prob)
 
             ''' ===================================================Doing the same for encoder-2===================================================
             '''
             [batch_size_2, src_len] = encoder_word_input_2.size()
 
-            encoder_input_2 = self.embedding_2(encoder_word_input_2, encoder_character_input_2, unk_idx, drop_prob)
+            encoder_input_2 = self.embedding_2(encoder_word_input_2, encoder_character_input_2, None, drop_prob)
             
 
             ''' ==================================================================================================================================
@@ -112,35 +113,51 @@ class RVAE(nn.Module):
             mu = None
             std = None
 
-        decoder_input_2 = decoder_input_2.transpose(0,1)
-        
-        #tensor to store decoder outputs
-        outputs = torch.zeros(trg_len, batch_size, sefl.decoder.params.word_vocab_size).cuda()
-        decoder_input_2[:, 0]
 
-        for t in range(1, trg_len):
+        #input = [batch size]
+        #hidden = [batch size, dec hid dim]
+        #encoder_outputs = [src len, batch size, enc hid dim * 2]
+        #mask = [batch size, src len]
+        # decoder_input_2 = decoder_input_2.transpose(0,1)
+
+        #tensor to store decoder outputs
+        out = t.zeros(trg_len, batch_size, self.decoder.params.word_vocab_size).cuda()
+        
+        input_words = self.embedding_2.word_embed(decoder_word_input_2)
+        [batch_size, seq_len, _] = input_words.size()
+        input_words = F.dropout(input_words, drop_prob)
+        z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
+        input_words = t.cat([input_words, z], 2)
+        
+        # print(input_words.size())
+        final_state = state_original
+        for word_id in range(0, trg_len):
+            input = input_words[:,word_id,:]
             #insert input token embedding, previous hidden state, all encoder hidden states 
             #  and mask
             #receive output tensor (predictions) and new hidden state
-            output, hidden, _ = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)    
+
+            output, final_state, _ = self.decoder(src_mask, input, z, drop_prob, enc_out_paraphrase, final_state)    
             
             #place predictions in a tensor holding predictions for each token
-            outputs[t] = output
+            out[word_id] = output
             
-            #decide if we are going to use teacher forcing or not
-            teacher_force = random.random() < 0.3
+            # #decide if we are going to use teacher forcing or not
+            # teacher_force = random.random() < 0.3
             
-            #get the highest predicted token from our predictions
-            top1 = output.argmax(1) 
+            # #get the highest predicted token from our predictions
+            # top1 = output.argmax(1) 
+            # print(top1)
             
-            #if teacher forcing, use actual next token as next input
-            #if not, use predicted token
-            input = trg[t] if teacher_force else top1
+            # #if teacher forcing, use actual next token as next input
+            # #if not, use predicted token
+            # # input = trg[word_id] if teacher_force else top1
 
-            # What to do with this decoder input ? --> Slightly resolved
-            decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
-            out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)           # Take a look at the decoder
-
+            # input_words = self.embedding_2.word_embed(top1)
+            # print(input_words.size())
+        out = out.transpose(0, 1)
+        print(out.size())
+        print(out)
         return out, final_state, kld, mu, std
 
     def learnable_parameters(self):
@@ -158,7 +175,7 @@ class RVAE(nn.Module):
             # 其中encoder_word_input, encoder_character_input是将 xo原始句输入倒过来前面加若干占位符，
             # decoder_word_input, decoder_character_input是 xo原始句加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是xo原始句加结束符后面加若干占位符
-            [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target] = input
+            [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target, src_mask] = input
 
             ''' =================================================== Input for Encoder-2 ========================================================
             '''
@@ -171,14 +188,13 @@ class RVAE(nn.Module):
             # 其中encoder_word_input, encoder_character_input是将 释义句xp输入倒过来前面加若干占位符，
             # decoder_word_input, decoder_character_input是 释义句xp加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是释义句xp加结束符后面加若干占位符
-            [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target] = input_2
-            unk_idx = batch_loader_2.word_to_idx[batch_loader_2.unk_token]
+            [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target, src_mask] = input_2
 
             ''' ================================================================================================================================
             '''
             # exit()
             # 这里encoder-input是原始句子xo的输入（句子翻转），encoder-input2是释义句xp的输入（句子翻转），decoder-input是释义句加加开始符号
-            logits, _, kld, _, _ = self(unk_idx, dropout,
+            logits, _, kld, _, _ = self(src_mask, dropout,
                                         encoder_word_input, encoder_character_input,
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,

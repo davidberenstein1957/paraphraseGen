@@ -277,10 +277,12 @@ class BatchLoader:
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_output[i] = line + [self.word_to_idx[self.pad_token]] * to_add
-
+        
+        encoder_input_mask = []
         for i, line in enumerate(encoder_word_input):#把输入的句子倒过来 前面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
+            encoder_input_mask.append([0] * to_add + line_len * [1])
             encoder_word_input[i] = [self.word_to_idx[self.pad_token]] * to_add + line[::-1]
 
         for i, line in enumerate(encoder_character_input):#把输入的句子倒过来 前面补齐pad-token
@@ -289,7 +291,7 @@ class BatchLoader:
             encoder_character_input[i] = [self.encode_characters(self.pad_token)] * to_add + line[::-1]
 
         return np.array(encoder_word_input), np.array(encoder_character_input), \
-               np.array(decoder_word_input), np.array(decoder_character_input), np.array(decoder_output)
+               np.array(decoder_word_input), np.array(decoder_character_input), np.array(decoder_output), np.array(encoder_input_mask)
 
     def next_embedding_seq(self, seq_len):
         """

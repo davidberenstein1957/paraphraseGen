@@ -80,15 +80,16 @@ class AttnDecoder(nn.Module):
 
         self.attention = Attention(self.params.decoder_rnn_size, self.params.decoder_rnn_size)
 
-        self.rnn = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
+        self.rnn = nn.LSTM(input_size=self.params.decoder_rnn_size*2+self.params.latent_variable_size + self.params.word_embed_size,
                            hidden_size=self.params.decoder_rnn_size,
                            num_layers=self.params.decoder_num_layers,
-                           batch_first=True,
+                           batch_first=False,
                            bidirectional=False)
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
+        self.fc_out = nn.Linear(self.params.decoder_rnn_size*3+self.params.latent_variable_size + self.params.word_embed_size, self.params.word_vocab_size)
 
-    def only_decoder_beam(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
+    def only_decoder_beam(self, mask, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
 
         assert parameters_allocation_check(self), \
             'Invalid CUDA options. Parameters should be allocated in the same memory'
@@ -104,7 +105,7 @@ class AttnDecoder(nn.Module):
         rnn_out, final_state = self.rnn(decoder_input, initial_state)
 
         return rnn_out, final_state
-
+                    
     def forward(self, mask, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
         """
         :param decoder_input: tensor with shape of [batch_size, seq_len, embed_size]
@@ -140,20 +141,21 @@ class AttnDecoder(nn.Module):
 
         return result, final_state
 
-    def forward(self, input, hidden, encoder_outputs, mask):
+    def forward(self, mask, input, z, drop_prob, encoder_outputs, hidden):
              
         #input = [batch size]
         #hidden = [batch size, dec hid dim]
         #encoder_outputs = [src len, batch size, enc hid dim * 2]
         #mask = [batch size, src len]
-
-        [batch_size, seq_len, _] = decoder_input.size()
-
-        input = input.unsqueeze(0)
+        encoder_outputs = encoder_outputs.transpose(0, 1)
+        temp_h = hidden[0][-1]
+        
+        embedded = input.unsqueeze(0)
                         
         #embedded = [1, batch size, emb dim]
         
-        a = self.attention(hidden, encoder_outputs, mask)
+        a = self.attention(temp_h, encoder_outputs, mask)
+
                 
         #a = [batch size, src len]
         
@@ -165,7 +167,7 @@ class AttnDecoder(nn.Module):
         
         #encoder_outputs = [batch size, src len, enc hid dim * 2]
         
-        weighted = torch.bmm(a, encoder_outputs)
+        weighted = t.bmm(a, encoder_outputs)
         
         #weighted = [batch size, 1, enc hid dim * 2]
         
@@ -173,11 +175,11 @@ class AttnDecoder(nn.Module):
         
         #weighted = [1, batch size, enc hid dim * 2]
         
-        rnn_input = torch.cat((embedded, weighted), dim = 2)
+        rnn_input = t.cat((embedded, weighted), dim = 2)
         
         #rnn_input = [1, batch size, (enc hid dim * 2) + emb dim]
             
-        output, hidden = self.rnn(rnn_input, hidden.unsqueeze(0))
+        output, hidden = self.rnn(rnn_input, hidden)
         
         #output = [seq len, batch size, dec hid dim * n directions]
         #hidden = [n layers * n directions, batch size, dec hid dim]
@@ -186,17 +188,17 @@ class AttnDecoder(nn.Module):
         #output = [1, batch size, dec hid dim]
         #hidden = [1, batch size, dec hid dim]
         #this also means that output == hidden
-        assert (output == hidden).all()
+        # assert (output == hidden).all()
         
         embedded = embedded.squeeze(0)
         output = output.squeeze(0)
         weighted = weighted.squeeze(0)
         
-        prediction = self.fc_out(torch.cat((output, weighted, embedded), dim = 1))
+        prediction = self.fc_out(t.cat((output, weighted, embedded), dim = 1))
         
         #prediction = [batch size, output dim]
         
-        return prediction, hidden.squeeze(0), a.squeeze(1)
+        return prediction, hidden, a.squeeze(1)
 
 class Attention(nn.Module):
     def __init__(self, enc_hid_dim, dec_hid_dim):
@@ -221,7 +223,7 @@ class Attention(nn.Module):
         #hidden = [batch size, src len, dec hid dim]
         #encoder_outputs = [batch size, src len, enc hid dim * 2]
         
-        energy = torch.tanh(self.attn(torch.cat((hidden, encoder_outputs), dim = 2))) 
+        energy = t.tanh(self.attn(t.cat((hidden, encoder_outputs), dim = 2))) 
         
         #energy = [batch size, src len, dec hid dim]
 

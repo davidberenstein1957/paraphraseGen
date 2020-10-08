@@ -11,8 +11,8 @@ from torch.autograd import Variable
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
 from utils.functional import *
-# from model.rvae_previous import RVAE
-from model.rvae import RVAE
+from model.rvae_previous import RVAE
+# from model.rvae import RVAE
 
 
 if __name__ == "__main__":
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
     parser.add_argument('--use-trained', type=bool, default=False)
-    parser.add_argument('--attn-model', type=bool, default=None)
+    parser.add_argument('--attn-model', type=bool, default=True)
 
     parser.add_argument('--use-file', type=bool, default=True)
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
