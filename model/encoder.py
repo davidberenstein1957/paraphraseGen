@@ -77,18 +77,20 @@ class Encoder(nn.Module):
         self.params = params
 
         self.hw1 = Highway(self.params.sum_depth + self.params.word_embed_size, 2, F.relu)
-
+        self.bi = True
+        self.dropout = nn.Dropout(0.3)
         self.rnn = nn.LSTM(input_size=self.params.word_embed_size + self.params.sum_depth,
                            hidden_size=self.params.encoder_rnn_size,
                            num_layers=self.params.encoder_num_layers,
                            batch_first=True,
-                           bidirectional=True)
+                           bidirectional=self.bi)
 
     def forward(self, input, State):
         """
         :param input: [batch_size, seq_len, embed_size] tensor
         :return: context of input sentenses with shape of [batch_size, latent_variable_size]
         """
+
         #print "Three"
         [batch_size, seq_len, embed_size] = input.size()
         #input shape   32    ,    26     ,    825
@@ -121,8 +123,11 @@ class Encoder(nn.Module):
           given as the input, the output will also be a packed sequence.
         """
         transfer_state_2 = final_state
-        
-        final_state = final_state.view(self.params.encoder_num_layers, 2, batch_size, self.params.encoder_rnn_size)
+        if self.bi:
+            size=2
+        else:
+            size=1
+        final_state = final_state.view(self.params.encoder_num_layers, size, batch_size, self.params.encoder_rnn_size)
         final_state = final_state[-1]
         h_1, h_2 = final_state[0], final_state[1]
         final_state = t.cat([h_1, h_2], 1)        

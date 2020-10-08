@@ -39,11 +39,12 @@ class Embedding(nn.Module):
                 word_input.size(), character_input.size())
         
         [batch_size, seq_len] = word_input.size()
-        if unk_idx is not None:
-            for i in range(batch_size):
-                for j in range(seq_len):
-                    if random.random() < drop_prob:
-                        word_input[i,j] = unk_idx
+        # if unk_idx is not None:
+        #     for i in range(batch_size):
+        #         for j in range(seq_len):
+        #             if random.random() < drop_prob:
+        #                 word_input[i,j] = unk_idx
+        #                 word_input[i,j].cuda()
         
         word_input = self.word_embed(word_input)
         #character_input 将字母变成字母的embedding，然后拼接在一起，作为一个词的 字母一级别的embedding
