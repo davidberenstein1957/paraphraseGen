@@ -187,17 +187,16 @@ class DecoderAttention(nn.Module):
         super(DecoderAttention, self).__init__()
 
         self.params = params
-
-        self.rnn_1 = nn.LSTM(input_size=self.params.latent_variable_size + self.params.word_embed_size,
+        self.input_size = self.params.latent_variable_size + self.params.word_embed_size
+        self.rnn = nn.LSTM(input_size=self.input_size,
                            hidden_size=self.params.decoder_rnn_size,
                            num_layers=self.params.decoder_num_layers,
                            batch_first=True,
                            bidirectional=False)
 
-        self.fc_hidden = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
-        self.fc_encoder = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
-        self.weight = nn.Parameter(torch.FloatTensor(1, hidden_size))
-        self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
+        self.hidden_size = self.params.decoder_rnn_size
+
+        self.attention = Attention(self.params.decoder_rnn_size, 'dot')
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
         nn.init.xavier_normal(self.fc.weight)
@@ -224,20 +223,22 @@ class DecoderAttention(nn.Module):
         state = initial_state
         for word_id in range(seq_len):
             embedded = decoder_input[:,word_id,:].unsqueeze(1)
-            # Calculating Alignment Scores
-            x = torch.tanh(self.fc_hidden(state[0])+self.fc_encoder(encoder_outputs))
-            alignment_scores = x.bmm(self.weight.unsqueeze(2))  
             
-            # Softmaxing alignment scores to get Attention weights
+            # Passing previous output word (embedded) and hidden state into LSTM cell
+            lstm_out, state = self.rnn(embedded, state)
+            lstm_out = lstm_out.transpose(0,1)
+            
+            # Calculating Alignment Scores - see Attention class for the forward pass function
+            alignment_scores = self.attention(lstm_out, encoder_outputs)
+            # Softmaxing alignment scores to obtain Attention weights
             attn_weights = F.softmax(alignment_scores.view(1,-1), dim=1)
             
-            # Multiplying the Attention weights with encoder outputs to get the context vector
-            context_vector = torch.bmm(attn_weights.unsqueeze(0),
-                                    encoder_outputs.unsqueeze(0))
+            # Multiplying Attention weights with encoder outputs to get context vector
+            context_vector = torch.bmm(attn_weights.unsqueeze(0),encoder_outputs)
             
-            # Concatenating context vector with embedded input word
-            output = torch.cat((embedded, context_vector[0]), 1).unsqueeze(0)
-            output, state = self.rnn_1(input, state)
+            # Concatenating output from LSTM with context vector
+            output = torch.cat((lstm_out, context_vector),-1)
+
             output_words[:, word_id] = output
 
         return rnn_out, final_state
@@ -276,6 +277,34 @@ class DecoderAttention(nn.Module):
 
         return result, final_state
 
-
+class Attention(nn.Module):
+    def __init__(self, hidden_size, method="dot"):
+        super(Attention, self).__init__()
+        self.method = method
+        self.hidden_size = hidden_size
+        
+        # Defining the layers/weights required depending on alignment scoring method
+        if method == "general":
+            self.fc = nn.Linear(hidden_size, hidden_size, bias=False)
+        
+        elif method == "concat":
+            self.fc = nn.Linear(hidden_size, hidden_size, bias=False)
+            self.weight = nn.Parameter(torch.FloatTensor(1, hidden_size))
+    
+    def forward(self, decoder_hidden, encoder_outputs):
+        if self.method == "dot":
+            print9
+            # For the dot scoring method, no weights or linear layers are involved
+            return encoder_outputs.bmm(decoder_hidden.view(1,-1,1)).squeeze(-1)
+        
+        elif self.method == "general":
+            # For general scoring, decoder hidden state is passed through linear layers to introduce a weight matrix
+            out = self.fc(decoder_hidden)
+            return encoder_outputs.bmm(out.view(1,-1,1)).squeeze(-1)
+        
+        elif self.method == "concat":
+            # For concat scoring, decoder hidden state and encoder outputs are concatenated first
+            out = torch.tanh(self.fc(decoder_hidden+encoder_outputs))
+            return out.bmm(self.weight.unsqueeze(-1)).squeeze(-1)
 
 
