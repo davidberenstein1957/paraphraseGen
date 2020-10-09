@@ -7,8 +7,8 @@ from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder, ResidualDecoder, AttnDecoder
-from .encoder import Encoder
+from .decoder import Decoder, ResidualDecoder, DecoderSRU
+from .encoder import Encoder, EncoderSRU
 
 
 class RVAE(nn.Module):
@@ -21,8 +21,8 @@ class RVAE(nn.Module):
         self.embedding = Embedding(self.params, path)
         self.embedding_2 = Embedding(self.params_2, path, True)
 
-        self.encoder_original = Encoder(self.params)
-        self.encoder_paraphrase = Encoder(self.params_2)
+        self.encoder_original = EncoderSRU(self.params)
+        self.encoder_paraphrase = EncoderSRU(self.params_2)
 
         # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
         #
@@ -31,9 +31,9 @@ class RVAE(nn.Module):
 
         # self.encoder_3 = Encoder(self.params)
         if self.params.attn_model:
-            self.decoder = AttnDecoder(self.params_2)
+            self.decoder = DecoderSRU(self.params_2)
         else:
-            self.decoder = ResidualDecoder(self.params_2)
+            self.decoder = DecoderSRU(self.params_2)
             # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
 
     def forward(self, unk_idx, drop_prob,
@@ -85,11 +85,11 @@ class RVAE(nn.Module):
             ''' ==================================================================================================================================
             '''
 
-            enc_out_original, context, h_0, c_0 = self.encoder_original(encoder_input, None)
-            state_original = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
+            enc_out_original, context, h_0 = self.encoder_original(encoder_input, None)
+            state_original = h_0  # Final state of Encoder-1 原始句子编码
             # state_original = context
-            enc_out_paraphrase, context_2, h_0, c_0 = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
-            state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 原始句子编码
+            enc_out_paraphrase, context_2, h_0 = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
+            state_paraphrase = h_0  # Final state of Encoder-2 原始句子编码
             # state_paraphrase = context_2
 
             mu = self.context_to_mu(context_2)
@@ -147,7 +147,7 @@ class RVAE(nn.Module):
             # decoder_word_input, decoder_character_input是 释义句xp加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是释义句xp加结束符后面加若干占位符
             [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target, _] = input_2
-            unk_idx = batch_loader_2.word_to_idx[batch_loader_2.unk_token]
+            unk_idx = None
 
             ''' ================================================================================================================================
             '''
@@ -316,8 +316,8 @@ class RVAE(nn.Module):
         # ]
         
         dec_states = [
-            dec_states[0].repeat(1, beam_size, 1),
-            dec_states[1].repeat(1, beam_size, 1)
+            dec_states.repeat(1, beam_size, 1),
+            # dec_states[1].repeat(1, beam_size, 1)
         ]
         
         # print'========== After =================='
@@ -420,10 +420,14 @@ class RVAE(nn.Module):
                     1, active_idx
                 ).view(*new_size))
 
-            dec_states = (
-                update_active(dec_states[0]),
-                update_active(dec_states[1])
-            )
+            dec_states = (update_active(dec_states)),
+                # update_active(dec_states[1])
+            
+
+            # dec_states = (
+            #     update_active(dec_states[0]),
+            #     update_active(dec_states[1])
+            # )
             dec_out = update_active(dec_out)
             # context = update_active(context)
 

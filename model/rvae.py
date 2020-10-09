@@ -7,7 +7,7 @@ from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder, ResidualDecoder, AttnDecoder
+from .decoder import Decoder, DecoderResidual, DecoderAttention
 from .encoder import Encoder
 
 
@@ -31,10 +31,10 @@ class RVAE(nn.Module):
 
         # self.encoder_3 = Encoder(self.params)
         if self.params.attn_model:
-            self.decoder = AttnDecoder(self.params_2)
+            self.decoder = DecoderAttention(self.params_2)
         else:
-            self.decoder = ResidualDecoder(self.params_2)
-            # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
+            self.decoder = Decoder(self.params_2)
+            # self.decoder = DecoderResidual(self.params_2)  # change this to params_2
 
     def forward(self, unk_idx, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,
@@ -147,7 +147,7 @@ class RVAE(nn.Module):
             # decoder_word_input, decoder_character_input是 释义句xp加了开始符号末端补齐
             # target，结束句子后面加了结束符，target是释义句xp加结束符后面加若干占位符
             [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target, _] = input_2
-            unk_idx = batch_loader_2.word_to_idx[batch_loader_2.unk_token]
+            unk_idx = None
 
             ''' ================================================================================================================================
             '''
