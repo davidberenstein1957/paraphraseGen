@@ -2,7 +2,6 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 # from torchqrnn import QRNN
-from sru import SRU, SRUCell
 
 from selfModules.highway import Highway
 from utils.functional import parameters_allocation_check

@@ -2,9 +2,9 @@ import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.functional import parameters_allocation_check
-from sru import SRU, SRUCell
-# from torchqrnn import QRNN
 import warnings
+from torch.autograd import Variable
+
 warnings.filterwarnings("ignore")
 
 class Decoder(nn.Module):
@@ -196,7 +196,7 @@ class DecoderAttention(nn.Module):
 
         self.hidden_size = self.params.decoder_rnn_size
 
-        self.attention = Attention(self.params.decoder_rnn_size, 'dot')
+        self.attn = Attn('dot', self.params.decoder_rnn_size)
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
         nn.init.xavier_normal(self.fc.weight)
@@ -221,27 +221,25 @@ class DecoderAttention(nn.Module):
         [batch_size, seq_len, _] = decoder_input.size()
         output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
         state = initial_state
-        for word_id in range(seq_len):
-            embedded = decoder_input[:,word_id,:].unsqueeze(1)
-            
-            # Passing previous output word (embedded) and hidden state into LSTM cell
-            lstm_out, state = self.rnn(embedded, state)
-            lstm_out = lstm_out.transpose(0,1)
-            
-            # Calculating Alignment Scores - see Attention class for the forward pass function
-            alignment_scores = self.attention(lstm_out, encoder_outputs)
-            # Softmaxing alignment scores to obtain Attention weights
-            attn_weights = F.softmax(alignment_scores.view(1,-1), dim=1)
-            
-            # Multiplying Attention weights with encoder outputs to get context vector
-            context_vector = torch.bmm(attn_weights.unsqueeze(0),encoder_outputs)
-            
-            # Concatenating output from LSTM with context vector
-            output = torch.cat((lstm_out, context_vector),-1)
+        for sentence_id in range(batch_size):
+            state = (h_0[:, sentence_id, :].unsqueeze(1).contiguous(), c_0[:, sentence_id, :].unsqueeze(1).contiguous())
+            for word_id in range(seq_len):
+                input = decoder_input[:,word_id,:].unsqueeze(1)
+                rnn_output, state = self.rnn(input, state)
+                rnn_output = rnn_output.transpose(0,1)
+                encoder_outputs = encoder_outputs.transpose(0,1)
+                
+                # Calculate attention from current RNN state and all encoder outputs; apply to encoder outputs
+                attn_weights = self.attn(rnn_output.squeeze(0), encoder_outputs)
+                context = attn_weights.bmm(encoder_outputs.transpose(0, 1)) # B x 1 x N
+                
+                # Final output layer (next word prediction) using the RNN hidden state and context vector
+                rnn_output = rnn_output.squeeze(0) # S=1 x B x N -> B x N
+                context = context.squeeze(1)       # B x S=1 x N -> B x N
+                output = F.log_softmax(self.out(torch.cat((rnn_output, context), 1)))
+                output_words[:, word_id] = t.add(input, state[0][-1,:,:].unsqueeze(1)).squeeze(1)
 
-            output_words[:, word_id] = output
-
-        return rnn_out, final_state
+        return rnn_output, final_state
 
     
     def forward(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
@@ -277,34 +275,48 @@ class DecoderAttention(nn.Module):
 
         return result, final_state
 
-class Attention(nn.Module):
-    def __init__(self, hidden_size, method="dot"):
-        super(Attention, self).__init__()
+class Attn(nn.Module):
+    def __init__(self, method, hidden_size):
+        super(Attn, self).__init__()
+        
         self.method = method
         self.hidden_size = hidden_size
         
-        # Defining the layers/weights required depending on alignment scoring method
-        if method == "general":
-            self.fc = nn.Linear(hidden_size, hidden_size, bias=False)
-        
-        elif method == "concat":
-            self.fc = nn.Linear(hidden_size, hidden_size, bias=False)
-            self.weight = nn.Parameter(torch.FloatTensor(1, hidden_size))
+        if self.method == 'general':
+            self.attn = nn.Linear(self.hidden_size, hidden_size)
+
+        elif self.method == 'concat':
+            self.attn = nn.Linear(self.hidden_size * 2, hidden_size)
+            self.other = nn.Parameter(torch.FloatTensor(1, hidden_size))
+
+    def forward(self, hidden, encoder_outputs):
+        seq_len = len(encoder_outputs)
+
+        # Create variable to store attention energies
+        attn_energies = Variable(t.zeros(seq_len)) # B x 1 x S
+        attn_energies = attn_energies.cuda()
+
+        # Calculate energies for each encoder output
+        for i in range(seq_len):
+            attn_energies[i] = self.score(hidden, encoder_outputs[i])
+
+        # Normalize energies to weights in range 0 to 1, resize to 1 x 1 x seq_len
+        return F.softmax(attn_energies).unsqueeze(0).unsqueeze(0)
     
-    def forward(self, decoder_hidden, encoder_outputs):
-        if self.method == "dot":
-            print9
-            # For the dot scoring method, no weights or linear layers are involved
-            return encoder_outputs.bmm(decoder_hidden.view(1,-1,1)).squeeze(-1)
+    def score(self, hidden, encoder_output):
         
-        elif self.method == "general":
-            # For general scoring, decoder hidden state is passed through linear layers to introduce a weight matrix
-            out = self.fc(decoder_hidden)
-            return encoder_outputs.bmm(out.view(1,-1,1)).squeeze(-1)
+        if self.method == 'dot':
+            energy = hidden.dot(encoder_output)
+            return energy
         
-        elif self.method == "concat":
-            # For concat scoring, decoder hidden state and encoder outputs are concatenated first
-            out = torch.tanh(self.fc(decoder_hidden+encoder_outputs))
-            return out.bmm(self.weight.unsqueeze(-1)).squeeze(-1)
+        elif self.method == 'general':
+            energy = self.attn(encoder_output)
+            energy = hidden.dot(energy)
+            return energy
+        
+        elif self.method == 'concat':
+            energy = self.attn(t.cat((hidden, encoder_output), 1))
+            energy = self.other.dot(energy)
+            return energy
 
 
