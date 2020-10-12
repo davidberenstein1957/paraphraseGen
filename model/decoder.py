@@ -251,58 +251,62 @@ class DecoderAttention(nn.Module):
 
         return output_words, state
 
-    # def batch_unrolling(self, decoder_input, initial_state, encoder_outputs):
-    #     [batch_size, seq_len, embeddings] = decoder_input.size()
-    #     output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
-    #     encoder_outputs = self.fc_enc(encoder_outputs)
-    #     for sentence_id in range(batch_size):
-    #         state = (initial_state[0][:, sentence_id, :].unsqueeze(1).contiguous(), initial_state[1][:, sentence_id, :].unsqueeze(1).contiguous())
-    #         sent_outputs = encoder_outputs[sentence_id].unsqueeze(0)
-            
-    #         for word_id in range(seq_len):
-    #             input = decoder_input[sentence_id, word_id, :].unsqueeze(0).unsqueeze(0)
-    #             lstm_out, state = self.rnn(input, state)
-                
-    #             # Calculating Alignment Scores - see Attention class for the forward pass function
-    #             alignment_scores = self.attention(lstm_out, sent_outputs)
-    #             # Softmaxing alignment scores to obtain Attention weights
-    #             attn_weights = F.softmax(alignment_scores.view(1,-1), dim=1)
-                
-    #             # Multiplying Attention weights with encoder outputs to get context vector
-    #             context_vector = t.bmm(attn_weights.unsqueeze(0), sent_outputs)
-                
-    #             # Concatenating output from LSTM with context vector
-    #             output = t.cat((lstm_out, context_vector),-1)
-    #             output = self.fc_out(output)
-    #             output_words[sentence_id, word_id] = output
-
-    #     return output_words, state
-
     def batch_unrolling(self, decoder_input, initial_state, encoder_outputs):
         [batch_size, seq_len, embeddings] = decoder_input.size()
         output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
         encoder_outputs = self.fc_enc(encoder_outputs)
-        state = initial_state
-        for word_id in range(seq_len):
-            input = decoder_input[:, word_id, :].unsqueeze(0)
-            print(input.size())
-            lstm_out, state = self.rnn(input, state)
-            lstm_out.transpose(0,1)
+        for sentence_id in range(batch_size):
+            state = (initial_state[0][:, sentence_id, :].unsqueeze(1).contiguous(), initial_state[1][:, sentence_id, :].unsqueeze(1).contiguous())
+            sent_outputs = encoder_outputs[sentence_id].unsqueeze(0)
             
-            # Calculating Alignment Scores - see Attention class for the forward pass function
-            alignment_scores = self.attention(lstm_out, sent_outputs)
-            # Softmaxing alignment scores to obtain Attention weights
-            attn_weights = F.softmax(alignment_scores.view(1,-1), dim=1)
-            
-            # Multiplying Attention weights with encoder outputs to get context vector
-            context_vector = t.bmm(attn_weights.unsqueeze(0), sent_outputs)
-            
-            # Concatenating output from LSTM with context vector
-            output = t.cat((lstm_out, context_vector),-1)
-            output = self.fc_out(output)
-            output_words[sentence_id, word_id] = output
+            for word_id in range(seq_len):
+                input = decoder_input[sentence_id, word_id, :].unsqueeze(0).unsqueeze(0)
+                lstm_out, state = self.rnn(input, state)
+                
+                # Calculating Alignment Scores - see Attention class for the forward pass function
+                alignment_scores = self.attention(lstm_out, sent_outputs)
+                # Softmaxing alignment scores to obtain Attention weights
+                attn_weights = F.softmax(alignment_scores.view(1,-1), dim=1)
+
+                # print(attn_weights.size(), sent_outputs.size())
+                # Multiplying Attention weights with encoder outputs to get context vector
+                context_vector = t.bmm(attn_weights.unsqueeze(0), sent_outputs)
+                
+                # Concatenating output from LSTM with context vector
+                output = t.cat((lstm_out, context_vector),-1)
+                output = self.fc_out(output)
+                output_words[sentence_id, word_id] = output
 
         return output_words, state
+
+    # def batch_unrolling(self, decoder_input, initial_state, encoder_outputs):
+    #     [batch_size, seq_len, embeddings] = decoder_input.size()
+    #     output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
+    #     encoder_outputs = self.fc_enc(encoder_outputs)
+    #     state = initial_state
+    #     for word_id in range(seq_len):
+    #         input = decoder_input[:, word_id, :].unsqueeze(0)
+            
+    #         lstm_out, state = self.rnn(input, state)
+    #         lstm_out = lstm_out.transpose(0,1)
+            
+    #         # Calculating Alignment Scores - see Attention class for the forward pass function
+    #         alignment_scores = self.attention(lstm_out, encoder_outputs)
+
+    #         # Softmaxing alignment scores to obtain Attention weights
+    #         attn_weights = F.softmax(alignment_scores, dim=1)
+            
+    #         # Multiplying Attention weights with encoder outputs to get context vector
+    #         context_vector = t.bmm(attn_weights.unsqueeze(1), encoder_outputs)
+            
+    #         # Concatenating output from LSTM with context vector
+    #         output = t.cat((lstm_out, context_vector),-1)
+    #         output = self.fc_out(output)
+    #         output_words[:, word_id] = output.squeeze(1)
+
+    #     return output_words, state
+
+    
 
     
     def forward(self, decoder_input, z, drop_prob, encoder_outputs, initial_state=None):
@@ -362,7 +366,9 @@ class Attention(nn.Module):
         elif self.method == "general":
             # For general scoring, decoder hidden state is passed through linear layers to introduce a weight matrix
             out = self.fc(decoder_hidden)
-            return encoder_outputs.bmm(out.view(1,-1,1)).squeeze(-1)
+        
+            return encoder_outputs.bmm(out.transpose(1,2)).squeeze(-1) # use for batch unrolling
+            # return encoder_outputs.bmm(out.view(1,-1,1)).squeeze(-1) # normalling unrolling
 
         elif self.method == "concat":
             # For concat scoring, decoder hidden state and encoder outputs are concatenated first
