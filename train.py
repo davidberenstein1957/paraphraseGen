@@ -159,7 +159,8 @@ if __name__ == "__main__":
             np.save(save_path+f'/kld_result_npy_{iteration}'.format(args.kld_result), np.array(kld_result))
             print('MODEL SAVED')
 
-        if ((iteration % int(coef_modulo/10) == 0)):
+        # if ((iteration % int(coef_modulo/10) == 0)):
+        if iteration % 10 == 0:
             index = randint(0, len(data)-1)
 
             if args.use_file:
@@ -181,7 +182,9 @@ if __name__ == "__main__":
                         if batch_loader.end_token in sen:    
                             print ('generate sentence:     '+sen[:sen.index(batch_loader.end_token)])
                         else :
-                            print ('generate sentence:     '+sen)  
+                            print ('generate sentence:     '+sen) 
+
+        
 
     t.save(rvae.state_dict(), 'trained_RVAE')
 
