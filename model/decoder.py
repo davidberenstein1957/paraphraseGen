@@ -284,7 +284,7 @@ class DecoderAttention(nn.Module):
         encoder_outputs = self.fc_enc(encoder_outputs)
         state = initial_state
         for word_id in range(seq_len):
-            input = decoder_input[:, word_id, :].transpose(0,1)
+            input = decoder_input[:, word_id, :].unsqueeze(0)
             print(input.size())
             lstm_out, state = self.rnn(input, state)
             lstm_out.transpose(0,1)
