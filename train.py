@@ -28,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
     parser.add_argument('--use-trained', type=bool, default=False)
-    parser.add_argument('--attn-model', type=bool, default=True)
+    parser.add_argument('--attn-model', type=bool, default=False)
 
     parser.add_argument('--use-file', type=bool, default=True)
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
@@ -112,11 +112,7 @@ if __name__ == "__main__":
     start_index = 0
     start_time = time.time()
     
-    for iteration in range(args.use_trained, args.num_iterations):
-        coef = kld_coef(iteration, 0)
-        if coef == 1:
-            coef_modulo = iteration
-            break
+    coef_modulo = 10000
 
     if int(args.num_iterations/coef_modulo) % 2 == 0:
         args.num_iterations = int(args.num_iterations/coef_modulo) * coef_modulo
@@ -133,7 +129,7 @@ if __name__ == "__main__":
         
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
        
-        if ((iteration % coef_modulo == 0) & (iteration != 0)):
+        if (((iteration % int(coef_modulo/10) == 0)) & (iteration != 0)):
             print('\n')
             print('------------TRAIN-------------')
             print('-------------ETA--------------')

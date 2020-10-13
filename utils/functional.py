@@ -31,7 +31,7 @@ def kld_coef(iteration, coef_modulo):
     import math
 
     if coef_modulo == 0:
-        return (math.tanh((iteration - 3500)/350) + 1)/2
+        return iteration / coef_modulo
 
     try:
         test = math.floor(iteration / coef_modulo)
@@ -39,6 +39,6 @@ def kld_coef(iteration, coef_modulo):
         test = 0
 
     if test % 2 == 0:
-        return (math.tanh(((iteration % coef_modulo) - 3500)/350) + 1)/2 
+        return (iteration % coef_modulo)/coef_modulo
     else:
         return 1

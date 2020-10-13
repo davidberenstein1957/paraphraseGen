@@ -33,7 +33,7 @@ class RVAE(nn.Module):
         if self.params.attn_model:
             self.decoder = DecoderAttention(self.params_2)
         else:
-            self.decoder = Decoder(self.params_2)
+            self.decoder = DecoderResidual(self.params_2)
             # self.decoder = DecoderResidual(self.params_2)  # change this to params_2
 
     def forward(self, unk_idx, drop_prob,
