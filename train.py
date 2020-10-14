@@ -22,13 +22,14 @@ if __name__ == "__main__":
         raise FileNotFoundError("word embeddings file was't found")
 #一次一句，这样容易看，一次两个词
     parser = argparse.ArgumentParser(description='RVAE')
-    parser.add_argument('--num-iterations', type=int, default=120000)
+    parser.add_argument('--num-iterations', type=int, default=140000)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--use-cuda', type=bool, default=True)
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
     parser.add_argument('--use-trained', type=bool, default=False)
     parser.add_argument('--attn-model', type=bool, default=False)
+    parser.add_argument('--res-model', type=bool, default=True)
 
     parser.add_argument('--use-file', type=bool, default=True)
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
@@ -36,7 +37,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--num-sample', type=int, default=5)
     parser.add_argument('--beam-top', type=int, default=1)
-    parser.add_argument('--beam-size', type=int, default=10)
+    parser.add_argument('--beam-size', type=int, default=100)
 
     parser.add_argument('--ce-result', default='')
     parser.add_argument('--kld-result', default='')
@@ -64,7 +65,8 @@ if __name__ == "__main__":
                             batch_loader.max_seq_len,
                             batch_loader.words_vocab_size,
                             batch_loader.chars_vocab_size,
-                            args.attn_model)
+                            args.attn_model,
+                            args.res_model)
 
 
     ''' =================== Doing the same for encoder-2 ===============================================
@@ -84,7 +86,8 @@ if __name__ == "__main__":
                             batch_loader_2.max_seq_len,
                             batch_loader_2.words_vocab_size,
                             batch_loader_2.chars_vocab_size,
-                            args.attn_model)
+                            args.attn_model,
+                            args.res_model)
     '''=================================================================================================
     '''
     modulo_operator = len(open(args.train_file, 'r').readlines())

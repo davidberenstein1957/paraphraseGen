@@ -7,7 +7,7 @@ from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, kld_coef, parameters_allocation_check
 
-from .decoder import Decoder, DecoderResidual, DecoderAttention
+from .decoder import Decoder, DecoderResidual, DecoderAttention, DecoderResidualAttention
 from .encoder import Encoder
 
 
@@ -30,11 +30,14 @@ class RVAE(nn.Module):
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
         # self.encoder_3 = Encoder(self.params)
-        if self.params.attn_model:
+        if self.params.attn_model and self.params.res_model:
+            self.decoder = DecoderResidualAttention(self.params_2)
+        elif self.params.attn_model:
             self.decoder = DecoderAttention(self.params_2)
-        else:
+        elif self.params.res_model:
             self.decoder = DecoderResidual(self.params_2)
-            # self.decoder = DecoderResidual(self.params_2)  # change this to params_2
+        else:
+            self.decoder = Decoder(self.params_2)
 
     def forward(self, unk_idx, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,
@@ -165,7 +168,8 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            # 40 work fairly okay
+            loss = 30 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
@@ -429,7 +433,7 @@ class RVAE(nn.Module):
 
             remaining_sents = len(active)
 
-         # (4) package everything up
+        # (4) package everything up
 
         allHyp, allScores = [], []
 
