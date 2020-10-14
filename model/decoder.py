@@ -127,7 +127,7 @@ class DecoderResidual(nn.Module):
         rnn_out, state = self.rnn_1(decoder_input, initial_state)
         rnn_out = t.add(rnn_out, decoder_input)
         rnn_out, final_state = self.rnn_2(rnn_out, state)    
-        rnn_out = t.add(rnn_out, decoder_input)
+        # rnn_out = t.add(rnn_out, decoder_input)
 
         return rnn_out, final_state
 
