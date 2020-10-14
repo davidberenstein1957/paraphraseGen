@@ -91,6 +91,19 @@ class DecoderResidual(nn.Module):
                            num_layers=self.params.decoder_num_layers,
                            batch_first=True,
                            bidirectional=False)
+        
+        self.rnn_3 = nn.LSTM(input_size=self.params.decoder_rnn_size,
+                           hidden_size=self.params.decoder_rnn_size,
+                           num_layers=self.params.decoder_num_layers,
+                           batch_first=True,
+                           bidirectional=False)
+
+        self.rnn_4 = nn.LSTM(input_size=self.params.decoder_rnn_size,
+                           hidden_size=self.params.decoder_rnn_size,
+                           num_layers=self.params.decoder_num_layers,
+                           batch_first=True,
+                           bidirectional=False)
+
 
         self.fc = nn.Linear(self.params.decoder_rnn_size, self.params.word_vocab_size)
         nn.init.xavier_normal(self.fc.weight)
@@ -124,10 +137,13 @@ class DecoderResidual(nn.Module):
     #     return rnn_out, final_state
 
     def batch_unrolling(self, decoder_input,  initial_state, x=None):
-        rnn_out, state = self.rnn_1(decoder_input, initial_state)
-        rnn_out = t.add(rnn_out, decoder_input)
-        rnn_out, final_state = self.rnn_2(rnn_out, state)    
-        # rnn_out = t.add(rnn_out, decoder_input)
+        rnn_out_1, _ = self.rnn_1(decoder_input, initial_state)
+        rnn_out = t.add(rnn_out_1, decoder_input)
+        rnn_out_2, _ = self.rnn_2(rnn_out, initial_state)    
+        rnn_out = t.add(rnn_out, rnn_out_2)
+        rnn_out_3, _ = self.rnn_3(rnn_out, initial_state)    
+        rnn_out = t.add(rnn_out_3, decoder_input)
+        rnn_out, final_state = self.rnn_4(rnn_out, initial_state)  
 
         return rnn_out, final_state
 
