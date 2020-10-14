@@ -111,17 +111,27 @@ class DecoderResidual(nn.Module):
 
         return rnn_out, final_state
 
+    # def batch_unrolling(self, decoder_input,  initial_state, x=None):
+    #     [batch_size, seq_len, _] = decoder_input.size()
+    #     output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
+    #     state = initial_state
+    #     for word_id in range(seq_len):
+    #         input = decoder_input[:,word_id,:].unsqueeze(1)
+    #         rnn_out, state = self.rnn_1(input, state)
+    #         output_words[:, word_id] = t.add(input, state[0][-1,:,:].unsqueeze(1)).squeeze(1)
+    #     rnn_out, final_state = self.rnn_2(output_words, initial_state)    
+
+    #     return rnn_out, final_state
+
     def batch_unrolling(self, decoder_input,  initial_state, x=None):
-        [batch_size, seq_len, _] = decoder_input.size()
-        output_words = t.empty(decoder_input.size(), requires_grad=True).cuda()
-        state = initial_state
-        for word_id in range(seq_len):
-            input = decoder_input[:,word_id,:].unsqueeze(1)
-            rnn_out, state = self.rnn_1(input, state)
-            output_words[:, word_id] = t.add(input, state[0][-1,:,:].unsqueeze(1)).squeeze(1)
-        rnn_out, final_state = self.rnn_2(output_words, initial_state)    
+        rnn_out, state = self.rnn_1(decoder_input, initial_state)
+        rnn_out = t.add(rnn_out, decoder_input)
+        rnn_out, final_state = self.rnn_2(rnn_out, state)    
+        rnn_out = t.add(rnn_out, decoder_input)
 
         return rnn_out, final_state
+
+
 
     # https://pytorch.org/tutorials/beginner/nlp/sequence_models_tutorial.html
     def residual_unrolling_in_the_deep(self, decoder_input,  initial_state, step=True):
