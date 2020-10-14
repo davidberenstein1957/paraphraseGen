@@ -169,7 +169,7 @@ class RVAE(nn.Module):
             cross_entropy = F.cross_entropy(logits, target)
 
             # 40 work fairly okay
-            loss = 30 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 70 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
