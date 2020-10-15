@@ -9,6 +9,9 @@ verify_ssl = true
 torch = "*"
 torchvision = "*"
 numpy = "*"
+pyter3 = "*"
+rouge = "*"
+tensorflow = "==1.15"
 
 [requires]
 python_version = "3.7"
