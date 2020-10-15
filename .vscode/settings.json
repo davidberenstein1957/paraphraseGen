@@ -1,0 +1,4 @@
+{
+    "python.pythonPath": "/Users/davidberenstein/.local/share/virtualenvs/paraphraseGen-JpyQhGg6/bin/python",
+    "python.formatting.provider": "black"
+}

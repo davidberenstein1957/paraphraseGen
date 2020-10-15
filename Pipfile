@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+black = "*"
 
 [packages]
 torch = "*"
@@ -11,7 +12,13 @@ torchvision = "*"
 numpy = "*"
 pyter3 = "*"
 rouge = "*"
-tensorflow = "==1.15"
+tensorflow = "<2.0,>=1.15"
+install = "*"
+nltk = "*"
+ipykernel = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
