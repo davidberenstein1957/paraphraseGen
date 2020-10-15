@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from beam_search import Beam
 from selfModules.embedding import Embedding
 from torch.autograd import Variable
-from utils.functional import fold, kld_coef, parameters_allocation_check
+from utils.functional import fold, parameters_allocation_check
 
 from .decoder import Decoder, DecoderResidual, DecoderAttention, DecoderResidualAttention
 from .encoder import Encoder

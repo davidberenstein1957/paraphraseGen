@@ -27,9 +27,10 @@ if __name__ == "__main__":
     parser.add_argument('--use-cuda', type=bool, default=True)
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
+    parser.add_argument('--cyc-annealing', type=bool, default=False)
     parser.add_argument('--use-trained', type=bool, default=False)
     parser.add_argument('--attn-model', type=bool, default=False)
-    parser.add_argument('--res-model', type=bool, default=True)
+    parser.add_argument('--res-model', type=bool, default=False)
 
     parser.add_argument('--use-file', type=bool, default=True)
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
@@ -115,6 +116,7 @@ if __name__ == "__main__":
     start_index = 0
     start_time = time.time()
     
+
     coef_modulo = 10000
 
     if int(args.num_iterations/coef_modulo) % 2 == 0:
@@ -128,7 +130,10 @@ if __name__ == "__main__":
         start_index = (start_index+args.batch_size)%(modulo_operator)
         #start_index = (start_index+args.batch_size)%149163 #计算交叉熵损失，等
         
-        coef = kld_coef(iteration, coef_modulo)
+        if args.cyc_annealing:
+            coef = kld_coef_cyc(iteration, coef_modulo)
+        else:
+            coef = kld_coef_mono(iteration)
         
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
        
