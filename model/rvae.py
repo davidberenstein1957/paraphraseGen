@@ -26,6 +26,12 @@ class RVAE(nn.Module):
 
         # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
         #
+        self.bow_project = nn.Sequential(
+            nn.Linear(self.params.latent_variable_size + self.params.word_embed_size, 400),
+            nn.Tanh(),
+            nn.Dropout(1 - 1),
+            nn.Linear(400, self.params.word_vocab_size))
+
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
@@ -161,14 +167,21 @@ class RVAE(nn.Module):
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,
                                         z=None)
-            
+            # https://github.com/ruotianluo/NeuralDialog-CVAE-pytorch/blob/master/models/cvae.py
+            # https://arxiv.org/pdf/1703.10960.pdf
+            labels = self.output_tokens[:, 1:]
+            label_mask = torch.sign(labels).detach().float()
+            bow_logits = self.bow_project(logits)
+            bow_loss = -F.log_softmax(bow_logits, dim=1).gather(1, labels) * label_mask
+            bow_loss = torch.sum(bow_loss, 1)
+            bow_loss  = torch.mean(bow_loss)
+
             # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
             target = target.view(-1)
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            # 40 work fairly okay
             loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，

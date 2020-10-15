@@ -18,10 +18,12 @@ class Parameters:
 
         self.latent_variable_size = 1100
         
-        self.encoder_rnn_size = self.latent_variable_size + self.word_embed_size 
+        # self.encoder_rnn_size = self.latent_variable_size + self.word_embed_size 
+        self.encoder_rnn_size = 600
         self.encoder_num_layers = 1
 
-        self.decoder_rnn_size = self.latent_variable_size + self.word_embed_size
+        # self.decoder_rnn_size = self.latent_variable_size + self.word_embed_size
+        self.decoder_rnn_size = 600
         self.decoder_num_layers = 2
 
         self.attn_model = attn_model
