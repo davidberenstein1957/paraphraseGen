@@ -13,7 +13,6 @@ from .functional import *
 
 class BatchLoader:
     def __init__(self, data_files, idx_files, tensor_files, path='../../'):
-
         '''
             :properties
 
@@ -79,7 +78,6 @@ class BatchLoader:
         self.data_files = data_files
         self.idx_files = idx_files
         self.tensor_files = tensor_files
-        
 
         self.blind_symbol = ''
         self.pad_token = '_'
@@ -120,7 +118,7 @@ class BatchLoader:
         '''
             Tokenization/string cleaning for all datasets except for SST.
             Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data
-        
+
         '''
 
         string = re.sub(r"[^가-힣A-Za-z0-9(),!?:;.\'\`]", " ", string)
@@ -219,14 +217,14 @@ class BatchLoader:
 
         self.max_word_len = np.amax([len(word) for word in self.idx_to_word])
 
-        [self.word_tensor, self.character_tensor] = [np.array([np.load(target,allow_pickle=True) for target in input_type])
-                                                     for input_type in tensor_files]
+        [self.word_tensor, self.character_tensor] = [
+            np.array([np.load(target, allow_pickle=True) for target in input_type]) for input_type in tensor_files]
 
         self.just_words = [word for line in self.word_tensor[0] for word in line]
 
     def next_batch(self, batch_size, target_str, start_index):
-#         target = 0 if target_str == 'train' else 1
-        target=0
+        #         target = 0 if target_str == 'train' else 1
+        target = 0
         # indexes = np.array(np.random.randint(self.num_lines[target], size=batch_size))
         # indexes = np.array([10])
 
@@ -248,7 +246,7 @@ class BatchLoader:
 
         indexes = [index % len(self.word_tensor[target]) for index in indexes]
         encoder_word_input = [self.word_tensor[target][index] for index in indexes]
-        
+
 #         print 'Printing encoder_word_input ------------->'
 #         print encoder_word_input
         # print '-------------------------------'
@@ -258,40 +256,40 @@ class BatchLoader:
         max_input_seq_len = np.amax(input_seq_len)
 
         encoded_words = [[idx for idx in line] for line in encoder_word_input]
-        decoder_word_input = [[self.word_to_idx[self.go_token]] + line for line in encoder_word_input] #输入端加上开始标志
-        decoder_character_input = [[self.encode_characters(self.go_token)] + line for line in encoder_character_input] #输入端加上开始标志
-        decoder_output = [line + [self.word_to_idx[self.end_token]] for line in encoded_words] #输出端加入结束
+        decoder_word_input = [[self.word_to_idx[self.go_token]] + line for line in encoder_word_input]  # 输入端加上开始标志
+        decoder_character_input = [[self.encode_characters(
+            self.go_token)] + line for line in encoder_character_input]  # 输入端加上开始标志
+        decoder_output = [line + [self.word_to_idx[self.end_token]] for line in encoded_words]  # 输出端加入结束
 
         # sorry
-        for i, line in enumerate(decoder_word_input):# 后面补齐pad-token
+        for i, line in enumerate(decoder_word_input):  # 后面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_word_input[i] = line + [self.word_to_idx[self.pad_token]] * to_add
 
-        for i, line in enumerate(decoder_character_input):# 后面补齐pad-token
+        for i, line in enumerate(decoder_character_input):  # 后面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_character_input[i] = line + [self.encode_characters(self.pad_token)] * to_add
 
-        for i, line in enumerate(decoder_output):# 后面补齐pad-token
+        for i, line in enumerate(decoder_output):  # 后面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_output[i] = line + [self.word_to_idx[self.pad_token]] * to_add
-        
+
         encoder_input_mask = []
-        for i, line in enumerate(encoder_word_input):#把输入的句子倒过来 前面补齐pad-token
+        for i, line in enumerate(encoder_word_input):  # 把输入的句子倒过来 前面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
-            encoder_input_mask.append([0] * to_add + line_len * [1])
             encoder_word_input[i] = [self.word_to_idx[self.pad_token]] * to_add + line[::-1]
 
-        for i, line in enumerate(encoder_character_input):#把输入的句子倒过来 前面补齐pad-token
+        for i, line in enumerate(encoder_character_input):  # 把输入的句子倒过来 前面补齐pad-token
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             encoder_character_input[i] = [self.encode_characters(self.pad_token)] * to_add + line[::-1]
 
-        return np.array(encoder_word_input), np.array(encoder_character_input), \
-               np.array(decoder_word_input), np.array(decoder_character_input), np.array(decoder_output), np.array(encoder_input_mask)
+        return np.array(encoder_word_input), np.array(encoder_character_input), np.array(decoder_word_input), np.array(
+            decoder_character_input), np.array(decoder_output), np.array(encoder_input_mask)
 
     def next_embedding_seq(self, seq_len):
         """
@@ -315,9 +313,9 @@ class BatchLoader:
 
         # input and target
         result = np.array(result)
-        #print result
-        #print "---------------------print is coming --------------"
-        #print len(result[0])
+        # print result
+        # print "---------------------print is coming --------------"
+        # print len(result[0])
         return result[:, 0], result[:, 1]
 
     def go_input(self, batch_size):

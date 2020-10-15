@@ -1,10 +1,10 @@
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
-# from torchqrnn import QRNN
-
 from selfModules.highway import Highway
 from utils.functional import parameters_allocation_check
+
+# from torchqrnn import QRNN
 
 
 class Encoder(nn.Module):
@@ -15,7 +15,6 @@ class Encoder(nn.Module):
 
         self.hw1 = Highway(self.params.sum_depth + self.params.word_embed_size, 2, F.relu)
         self.bi = True
-        self.dropout = nn.Dropout(0.3)
         self.rnn = nn.LSTM(input_size=self.params.word_embed_size + self.params.sum_depth,
                            hidden_size=self.params.encoder_rnn_size,
                            num_layers=self.params.encoder_num_layers,
@@ -28,27 +27,25 @@ class Encoder(nn.Module):
         :return: context of input sentenses with shape of [batch_size, latent_variable_size]
         """
 
-        #print "Three"
+        # print "Three"
         [batch_size, seq_len, embed_size] = input.size()
-        #input shape   32    ,    26     ,    825
+        # input shape   32    ,    26     ,    825
 
         input = input.view(-1, embed_size)
-        #input shape   832(=32*26),825
+        # input shape   832(=32*26),825
 
         input = self.hw1(input)
-        #input shape 832(=32*26),825 
+        # input shape 832(=32*26),825
 
         input = input.view(batch_size, seq_len, embed_size)
-        #input shape 32    ,    26     ,    825
-
-        
+        # input shape 32    ,    26     ,    825
 
         assert parameters_allocation_check(self), \
             'Invalid CUDA options. Parameters should be allocated in the same memory'
 
         ''' Unfold rnn with zero initial state and get its final state from the last layer
         '''
-        encoder_outputs, (h_0, final_state) = self.rnn(input, State) 
+        encoder_outputs, (h_0, final_state) = self.rnn(input, State)
         """Inputs: input, (h_0, c_0)
         - **input** of shape `(seq_len, batch, input_size)`: tensor containing the features
           of the input sequence.
@@ -62,14 +59,13 @@ class Encoder(nn.Module):
         c_0 = final_state
 
         if self.bi:
-            size=2
+            size = 2
         else:
-            size=1
-        
+            size = 1
+
         final_state = final_state.view(self.params.encoder_num_layers, size, batch_size, self.params.encoder_rnn_size)
         final_state = final_state[-1]
         h_1, h_2 = final_state[0], final_state[1]
-        final_state = t.cat([h_1, h_2], 1)  
-
+        final_state = t.cat([h_1, h_2], 1)
 
         return encoder_outputs, final_state, h_0, c_0
