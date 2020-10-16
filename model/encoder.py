@@ -68,7 +68,7 @@ class Encoder(nn.Module):
         h_1, h_2 = final_state[0], final_state[1]
         final_state = t.cat([h_1, h_2], 1)
 
-        return encoder_outputs, final_state, h_0, c_0
+        return encoder_outputs, final_state, h_0, c_0, None
 
 
 # https://arxiv.org/pdf/1911.05343.pdf
@@ -120,7 +120,6 @@ class EncoderHR(nn.Module):
         '''
 
         context_ = []
-        
         for word_id in range(seq_len):
             encoder_outputs, (h_0, final_state) = self.rnn(input[:,word_id].unsqueeze(1), State)
             """Inputs: input, (h_0, c_0)

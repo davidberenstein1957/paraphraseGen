@@ -21,15 +21,16 @@ class RVAE(nn.Module):
         self.embedding = Embedding(self.params, path)
         self.embedding_2 = Embedding(self.params_2, path, True)
 
+        
         self.encoder_original = Encoder(self.params)
-        self.encoder_paraphrase = Encoder(self.params_2)
-
-        # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
+        if self.params.hrvae: 
+            self.encoder_paraphrase = EncoderHR(self.params_2)
+        else:
+            self.encoder_paraphrase = Encoder(self.params_2)
 
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
-        # self.encoder_3 = Encoder(self.params)
         if self.params.attn_model and self.params.res_model:
             self.decoder = DecoderResidualAttention(self.params_2)
         elif self.params.attn_model:
@@ -88,34 +89,54 @@ class RVAE(nn.Module):
             ''' ==================================================================================================================================
             '''
 
-            enc_out_original, context, h_0, c_0 = self.encoder_original(encoder_input, None)
+            enc_out_original, context, h_0, c_0, _ = self.encoder_original(encoder_input, None)
             state_original = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
             # state_original = context
-            enc_out_paraphrase, context_2, h_0, c_0 = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
+            enc_out_paraphrase, context_2, h_0, c_0, context_ = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
             state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 原始句子编码
             # state_paraphrase = context_2
 
-            mu = self.context_to_mu(context_2)
-            logvar = self.context_to_logvar(context_2)
-            std = t.exp(0.5 * logvar)
+            if context_ is not None:
 
-            z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
-            if use_cuda:
-                z = z.cuda()
+                mu_ = []
+                logvar_ = []
+                for entry in context_:
+                    mu_.append(self.context_to_mu(entry))
+                    logvar_.append(self.context_to_logvar(entry))
+                
+                std = t.exp(0.5 * logvar_[-1])
 
-            z = z * std + mu
+                z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                if use_cuda:
+                    z = z.cuda()
 
-            kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
+                z = z * std + mu_[-1]
 
-            # encoder_input = self.embedding(encoder_word_input, encoder_character_input)
-            # enc_out_original_attention, h_0 , c_0 = self.encoder_original_attn(encoder_input, None, enc_out_paraphrase)
+                mu = t.stack(mu_)
+                logvar = t.stack(logvar_)
+
+                kld = -0.5 * t.sum(1 + logvar - mu.pow(2) - logvar.exp())
+                kld = kld / mu.shape[0]
+            
+            else:
+
+                mu = self.context_to_mu(context_2)
+                logvar = self.context_to_logvar(context_2)
+                std = t.exp(0.5 * logvar)
+
+                z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                if use_cuda:
+                    z = z.cuda()
+
+                z = z * std + mu
+
+                kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
         else:
             kld = None
             mu = None
             std = None
 
-        # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)           # Take a look at the decoder
 
@@ -176,8 +197,7 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            # 20 -> evaluate going up
-            loss = 20 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 10000 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
@@ -289,7 +309,7 @@ class RVAE(nn.Module):
 
         encoder_input = self.embedding(encoder_word_input, encoder_character_input)
 
-        encoder_output, _, h0, c0 = self.encoder_original(encoder_input, None)
+        encoder_output, _, h0, c0, _ = self.encoder_original(encoder_input, None)
         State = (h0, c0)
         
         # print '----------------------'

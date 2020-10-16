@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0.3)
 
     parser.add_argument('--hrvae', type=bool, default=True) 
-    parser.add_argument('--annealing', type=str, default='mono') # none, mono, cyc
+    parser.add_argument('--annealing', type=str, default='cyc') # none, mono, cyc
     parser.add_argument('--use-trained', type=bool, default=False)
     parser.add_argument('--attn-model', type=bool, default=False)
     parser.add_argument('--res-model', type=bool, default=False)
@@ -40,7 +40,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--num-sample', type=int, default=5)
     parser.add_argument('--beam-top', type=int, default=1)
-    parser.add_argument('--beam-size', type=int, default=100)
+    parser.add_argument('--beam-size', type=int, default=10)
 
     parser.add_argument('--ce-result', default='')
     parser.add_argument('--kld-result', default='')
@@ -116,18 +116,17 @@ if __name__ == "__main__":
 
     ce_result = []
     kld_result = []
+    
 
     start_index = 0
     start_time = time.time()
     
-
     coef_modulo = 10000
 
     if int(args.num_iterations/coef_modulo) % 2 == 0:
         args.num_iterations = int(args.num_iterations/coef_modulo) * coef_modulo
     else:
         args.num_iterations = (int(args.num_iterations/coef_modulo)+1) * coef_modulo
-
 
     for iteration in range(args.num_iterations):
         #This needs to be changed ##这一步必须保证不大于训练数据数量-每一批数据的大小，否则越界报错######################
@@ -140,10 +139,9 @@ if __name__ == "__main__":
             coef = kld_coef_mono(iteration)
         else:
             coef = 1
-            
-        
+              
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
-       
+        
         if (((iteration % int(coef_modulo/10) == 0)) & (iteration != 0)):
             print('\n')
             print('------------TRAIN-------------')
@@ -172,9 +170,12 @@ if __name__ == "__main__":
 
         if ((iteration % int(coef_modulo/10) == 0)):
             index = randint(0, len(data)-1)
-
+            
+            ref = data[index]
+            hyp_ = []
+            
             if args.use_file:
-                print ('original sentence:     '+data[index])
+                print ('original sentence:     '+ref)
             else:
                 print ('original sentence:     '+text_input + '\n')
 
@@ -189,10 +190,19 @@ if __name__ == "__main__":
                     
                     for k in range(args.beam_top):
                         sen = " ". join([batch_loader_2.decode_word(x[k]) for x in tt])
-                        if batch_loader.end_token in sen:    
-                            print ('generate sentence:     '+sen[:sen.index(batch_loader.end_token)])
+                        if batch_loader.end_token in sen:  
+                            hyp = sen[:sen.index(batch_loader.end_token)]
+                            print ('generate sentence:     '+hyp)
                         else :
-                            print ('generate sentence:     '+sen) 
+                            hyp = sen
+                            print ('generate sentence:     '+hyp)
+
+                    hyp_.append(hyp)
+
+            # add BLUE etc result.
+            ce_result.append(cross_entropy.data.cpu().numpy())
+            kld_result.append(kld.data.cpu().numpy()*coef)
+            
 
         
 
