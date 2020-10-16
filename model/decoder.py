@@ -84,14 +84,14 @@ class DecoderResidual(nn.Module):
                            num_layers=self.params.decoder_num_layers,
                            batch_first=True,
                            bidirectional=False,
-                           dropout=0.5)
+                           dropout=0)
 
         self.rnn_2 = nn.LSTM(input_size=self.params.decoder_rnn_size,
                            hidden_size=self.params.decoder_rnn_size,
                            num_layers=self.params.decoder_num_layers,
                            batch_first=True,
                            bidirectional=False,
-                           dropout=0.5)
+                           dropout=0)
 
         self.rnn_3 = nn.LSTM(input_size=self.params.decoder_rnn_size,
                            hidden_size=self.params.decoder_rnn_size,
