@@ -2,7 +2,7 @@ from .functional import *
 
 
 class Parameters:
-    def __init__(self, max_word_len, max_seq_len, word_vocab_size, char_vocab_size, attn_model, res_model):
+    def __init__(self, max_word_len, max_seq_len, word_vocab_size, char_vocab_size, attn_model, res_model, hrvae):
         #     max_word_length,max_sentence_length, 
         self.max_word_len = int(max_word_len)
         self.max_seq_len = int(max_seq_len) + 1  # go or eos token
@@ -28,3 +28,4 @@ class Parameters:
 
         self.attn_model = attn_model
         self.res_model = res_model
+        self.hrvae = hrvae

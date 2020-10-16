@@ -27,6 +27,8 @@ if __name__ == "__main__":
     parser.add_argument('--use-cuda', type=bool, default=True)
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
+
+    parser.add_argument('--hrvae', type=bool, default=True) 
     parser.add_argument('--annealing', type=str, default='mono') # none, mono, cyc
     parser.add_argument('--use-trained', type=bool, default=False)
     parser.add_argument('--attn-model', type=bool, default=False)
@@ -67,7 +69,8 @@ if __name__ == "__main__":
                             batch_loader.words_vocab_size,
                             batch_loader.chars_vocab_size,
                             args.attn_model,
-                            args.res_model)
+                            args.res_model,
+                            args.hrvae)
 
 
     ''' =================== Doing the same for encoder-2 ===============================================
@@ -88,7 +91,8 @@ if __name__ == "__main__":
                             batch_loader_2.words_vocab_size,
                             batch_loader_2.chars_vocab_size,
                             args.attn_model,
-                            args.res_model)
+                            args.res_model,
+                            args.hrvae)
     '''=================================================================================================
     '''
     modulo_operator = len(open(args.train_file, 'r').readlines())
@@ -132,7 +136,7 @@ if __name__ == "__main__":
         
         if args.annealing == 'cyc':
             coef = kld_coef_cyc(iteration, coef_modulo)
-        elif args.annealing == 'mono'
+        elif args.annealing == 'mono':
             coef = kld_coef_mono(iteration)
         else:
             coef = 1
