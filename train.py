@@ -11,8 +11,8 @@ from torch.autograd import Variable
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
 from utils.functional import *
-# from model.rvae_previous import RVAE
-from model.rvae import RVAE
+from model.rvae_previous import RVAE
+# from model.rvae import RVAE
 
 
 if __name__ == "__main__":
@@ -27,10 +27,10 @@ if __name__ == "__main__":
     parser.add_argument('--use-cuda', type=bool, default=True)
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
-    parser.add_argument('--cyc-annealing', type=bool, default=False)
+    parser.add_argument('--annealing', type=str, default='mono') # none, mono, cyc
     parser.add_argument('--use-trained', type=bool, default=False)
     parser.add_argument('--attn-model', type=bool, default=False)
-    parser.add_argument('--res-model', type=bool, default=True)
+    parser.add_argument('--res-model', type=bool, default=False)
 
     parser.add_argument('--use-file', type=bool, default=True)
     parser.add_argument('--test-file', type=str, default= path+'/data/test.txt')
@@ -130,10 +130,13 @@ if __name__ == "__main__":
         start_index = (start_index+args.batch_size)%(modulo_operator)
         #start_index = (start_index+args.batch_size)%149163 #计算交叉熵损失，等
         
-        if args.cyc_annealing:
+        if args.annealing == 'cyc':
             coef = kld_coef_cyc(iteration, coef_modulo)
-        else:
+        elif args.annealing == 'mono'
             coef = kld_coef_mono(iteration)
+        else:
+            coef = 1
+            
         
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
        

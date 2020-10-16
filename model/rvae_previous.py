@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from beam_search import Beam
 from selfModules.embedding import Embedding
 from torch.autograd import Variable
-from utils.functional import fold, kld_coef, parameters_allocation_check
+from utils.functional import fold, parameters_allocation_check
 
-from .decoder import Decoder, ResidualDecoder, DecoderSRU
-from .encoder import Encoder, EncoderSRU
+from .decoder import Decoder, DecoderResidual, DecoderAttention, DecoderResidualAttention
+from .encoder import Encoder, EncoderHR
 
 
 class RVAE(nn.Module):
@@ -21,20 +21,32 @@ class RVAE(nn.Module):
         self.embedding = Embedding(self.params, path)
         self.embedding_2 = Embedding(self.params_2, path, True)
 
-        self.encoder_original = EncoderSRU(self.params)
-        self.encoder_paraphrase = EncoderSRU(self.params_2)
-
+        
+        self.encoder_original = Encoder(self.params)
+        if self.params.hr_rvae: 
+            self.encoder_paraphrase = EncoderHR(self.params_2)
+        else:
+            self.encoder_paraphrase = Encoder(self.params_2)
         # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
         #
+        self.bow_project = nn.Sequential(
+            nn.Linear(self.params.latent_variable_size + self.params.word_embed_size, 400),
+            nn.Tanh(),
+            nn.Dropout(1 - 1),
+            nn.Linear(400, self.params.word_vocab_size))
+
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
         # self.encoder_3 = Encoder(self.params)
-        if self.params.attn_model:
-            self.decoder = DecoderSRU(self.params_2)
+        if self.params.attn_model and self.params.res_model:
+            self.decoder = DecoderResidualAttention(self.params_2)
+        elif self.params.attn_model:
+            self.decoder = DecoderAttention(self.params_2)
+        elif self.params.res_model:
+            self.decoder = DecoderResidual(self.params_2)
         else:
-            self.decoder = DecoderSRU(self.params_2)
-            # self.decoder = ResidualDecoder(self.params_2)  # change this to params_2
+            self.decoder = Decoder(self.params_2)
 
     def forward(self, unk_idx, drop_prob,
                 encoder_word_input=None, encoder_character_input=None,
@@ -85,27 +97,32 @@ class RVAE(nn.Module):
             ''' ==================================================================================================================================
             '''
 
-            enc_out_original, context, h_0 = self.encoder_original(encoder_input, None)
-            state_original = h_0  # Final state of Encoder-1 原始句子编码
+            enc_out_original, context, h_0, c_0 = self.encoder_original(encoder_input, None)
+            state_original = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
             # state_original = context
-            enc_out_paraphrase, context_2, h_0 = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
-            state_paraphrase = h_0  # Final state of Encoder-2 原始句子编码
+            enc_out_paraphrase, context_2, h_0, c_0, context_ = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
+            state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 原始句子编码
             # state_paraphrase = context_2
 
-            mu = self.context_to_mu(context_2)
-            logvar = self.context_to_logvar(context_2)
-            std = t.exp(0.5 * logvar)
+            mu_ = []
+            logvar_ = []
+            for entry in context_:
+                mu_.append(self.context_to_mu(entry))
+                logvar_.append(self.context_to_logvar(entry))
+            
+            std = t.exp(0.5 * logvar_[-1])
 
             z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
             if use_cuda:
                 z = z.cuda()
 
-            z = z * std + mu
+            z = z * std + mu_[-1]
 
-            kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
+            mu = t.stack(mu_)
+            logvar = t.stack(logvar_)
 
-            # encoder_input = self.embedding(encoder_word_input, encoder_character_input)
-            # enc_out_original_attention, h_0 , c_0 = self.encoder_original_attn(encoder_input, None, enc_out_paraphrase)
+            kld = -0.5 * t.sum(1 + logvar - mu.pow(2) - logvar.exp())
+            kld = kld / mu.shape[0]
 
         else:
             kld = None
@@ -158,7 +175,15 @@ class RVAE(nn.Module):
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,
                                         z=None)
-            
+            # https://github.com/ruotianluo/NeuralDialog-CVAE-pytorch/blob/master/models/cvae.py
+            # https://arxiv.org/pdf/1703.10960.pdf
+            # labels = self.output_tokens[:, 1:]
+            # label_mask = torch.sign(labels).detach().float()
+            # bow_logits = self.bow_project(logits)
+            # bow_loss = -F.log_softmax(bow_logits, dim=1).gather(1, labels) * label_mask
+            # bow_loss = torch.sum(bow_loss, 1)
+            # bow_loss  = torch.mean(bow_loss)
+
             # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
             target = target.view(-1)
@@ -316,8 +341,8 @@ class RVAE(nn.Module):
         # ]
         
         dec_states = [
-            dec_states.repeat(1, beam_size, 1),
-            # dec_states[1].repeat(1, beam_size, 1)
+            dec_states[0].repeat(1, beam_size, 1),
+            dec_states[1].repeat(1, beam_size, 1)
         ]
         
         # print'========== After =================='
@@ -420,20 +445,16 @@ class RVAE(nn.Module):
                     1, active_idx
                 ).view(*new_size))
 
-            dec_states = (update_active(dec_states)),
-                # update_active(dec_states[1])
-            
-
-            # dec_states = (
-            #     update_active(dec_states[0]),
-            #     update_active(dec_states[1])
-            # )
+            dec_states = (
+                update_active(dec_states[0]),
+                update_active(dec_states[1])
+            )
             dec_out = update_active(dec_out)
             # context = update_active(context)
 
             remaining_sents = len(active)
 
-         # (4) package everything up
+        # (4) package everything up
 
         allHyp, allScores = [], []
 

@@ -8,7 +8,7 @@ from torch.autograd import Variable
 from utils.functional import fold, parameters_allocation_check
 
 from .decoder import Decoder, DecoderResidual, DecoderAttention, DecoderResidualAttention
-from .encoder import Encoder
+from .encoder import Encoder, EncoderHR
 
 
 class RVAE(nn.Module):
@@ -25,12 +25,6 @@ class RVAE(nn.Module):
         self.encoder_paraphrase = Encoder(self.params_2)
 
         # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
-        #
-        self.bow_project = nn.Sequential(
-            nn.Linear(self.params.latent_variable_size + self.params.word_embed_size, 400),
-            nn.Tanh(),
-            nn.Dropout(1 - 1),
-            nn.Linear(400, self.params.word_vocab_size))
 
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
@@ -182,7 +176,8 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            # 20 -> evaluate going up
+            loss = 20 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
