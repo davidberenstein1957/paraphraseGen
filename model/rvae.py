@@ -169,12 +169,12 @@ class RVAE(nn.Module):
                                         z=None)
             # https://github.com/ruotianluo/NeuralDialog-CVAE-pytorch/blob/master/models/cvae.py
             # https://arxiv.org/pdf/1703.10960.pdf
-            labels = self.output_tokens[:, 1:]
-            label_mask = torch.sign(labels).detach().float()
-            bow_logits = self.bow_project(logits)
-            bow_loss = -F.log_softmax(bow_logits, dim=1).gather(1, labels) * label_mask
-            bow_loss = torch.sum(bow_loss, 1)
-            bow_loss  = torch.mean(bow_loss)
+            # labels = self.output_tokens[:, 1:]
+            # label_mask = torch.sign(labels).detach().float()
+            # bow_logits = self.bow_project(logits)
+            # bow_loss = -F.log_softmax(bow_logits, dim=1).gather(1, labels) * label_mask
+            # bow_loss = torch.sum(bow_loss, 1)
+            # bow_loss  = torch.mean(bow_loss)
 
             # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
