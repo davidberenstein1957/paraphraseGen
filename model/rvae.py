@@ -192,12 +192,14 @@ class RVAE(nn.Module):
             # bow_loss  = torch.mean(bow_loss)
 
             # logits = logits.view(-1, self.params.word_vocab_size)
+            
             logits = logits.view(-1, self.params_2.word_vocab_size)
+            print([batch_loader_2.decode_word(x[k]) for x in logits])
             target = target.view(-1)
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            loss = 10000 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递

@@ -28,13 +28,7 @@ class RVAE(nn.Module):
         else:
             self.encoder_paraphrase = Encoder(self.params_2)
         
-        # consider https://stackoverflow.com/questions/49224413/difference-between-1-lstm-with-num-layers-2-and-2-lstms-in-pytorch
-        #
-        self.bow_project = nn.Sequential(
-            nn.Linear(self.params.latent_variable_size + self.params.word_embed_size, 400),
-            nn.Tanh(),
-            nn.Dropout(1 - 1),
-            nn.Linear(400, self.params.word_vocab_size))
+
 
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
@@ -191,18 +185,33 @@ class RVAE(nn.Module):
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,
                                         z=None)
-            # https://github.com/ruotianluo/NeuralDialog-CVAE-pytorch/blob/master/models/cvae.py
-            # https://arxiv.org/pdf/1703.10960.pdf
-            # labels = self.output_tokens[:, 1:]
-            # label_mask = torch.sign(labels).detach().float()
-            # bow_logits = self.bow_project(logits)
-            # bow_loss = -F.log_softmax(bow_logits, dim=1).gather(1, labels) * label_mask
-            # bow_loss = torch.sum(bow_loss, 1)
-            # bow_loss  = torch.mean(bow_loss)
 
+            # print(logits.size(), target.size())
+            [batch_size, seq_len, _] = logits.size()
+            sentence_ = []
+            for i in range(batch_size):
+                sentence = ' '
+                for j in range(seq_len):
+                    sentence += batch_loader_2.sample_word_from_distribution(F.softmax(logits[i,j]).data.cpu().numpy())
+                    sentence += ' '
+                sentence_.append(sentence)
+            print(sentence_)
             # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
             target = target.view(-1)
+
+            
+            # prediction_gen = F.softmax(logits)
+            # print(prediction_gen.size())
+            # exit()
+            # word = batch_loader.sample_word_from_distribution(prediction.data.cpu().numpy()[-1])
+            print(batch_loader_2.sample_word_from_distribution(F.softmax(logits[0]).data.cpu().numpy()))
+            # print([batch_loader_2.decode_word(x) for x in logits])
+            # print([batch_loader_2.decode_word(x) for x in target])
+            # exit()
+            print(F.softmax(logits[0]), target[0])
+            print(logits.size(), target.size())
+            exit()
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 

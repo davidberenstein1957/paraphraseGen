@@ -28,8 +28,8 @@ if __name__ == "__main__":
     parser.add_argument('--learning-rate', type=float, default=0.00005)
     parser.add_argument('--dropout', type=float, default=0.3)
 
-    parser.add_argument('--hrvae', type=bool, default=True) 
-    parser.add_argument('--annealing', type=str, default='cyc') # none, mono, cyc
+    parser.add_argument('--hrvae', type=bool, default=False) 
+    parser.add_argument('--annealing', type=str, default='mono') # none, mono, cyc
     parser.add_argument('--use-trained', type=bool, default=False)
     parser.add_argument('--attn-model', type=bool, default=False)
     parser.add_argument('--res-model', type=bool, default=False)
