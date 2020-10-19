@@ -1,4 +1,6 @@
 import numpy as np
+from numpy import dot
+from numpy.linalg import norm
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
@@ -208,6 +210,10 @@ class RVAE(nn.Module):
                 sentence = sentence.split(' </s>')[0]
                 sentence_.append(sentence)
             reference_embedding = list(self.embed(sentence_).numpy())
+            sim_score = 0
+            for (hyp, ref) in zip(hypothesis_embedding, reference_embedding):
+                sim_score += dot(hyp, ref) / (norm(hyp) * norm(ref))
+            sim_score = sim_score / batch_size
             
             # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
@@ -215,10 +221,8 @@ class RVAE(nn.Module):
             
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
-            print(F.softmax(logits[0]), target[0])
-            print(cross_entropy.size(), target.size())
-            exit()
-            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            
+            loss = 79 * cross_entropy + coef * kld + (1-sim_score)  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
