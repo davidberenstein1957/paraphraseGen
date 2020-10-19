@@ -31,7 +31,7 @@ class RVAE(nn.Module):
         else:
             self.encoder_paraphrase = Encoder(self.params_2)
         
-        self.embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
+        # self.embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
 
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
@@ -199,21 +199,23 @@ class RVAE(nn.Module):
                     sentence += ' '
                 if '</s>' in sentence:
                     sentence = sentence.split(' </s>')[0]
+                if ' _ ' in sentence:
+                    sentence = sentence.split(' _')[0]
                 sentence_.append(sentence)
-            hypothesis_embedding = list(self.embed(sentence_).numpy())
-            sentence_ = []
-            for i in range(batch_size):
-                sentence = ''
-                for j in range(seq_len):
-                    sentence += batch_loader_2.decode_word(target[i,j])
-                    sentence += ' '
-                sentence = sentence.split(' </s>')[0]
-                sentence_.append(sentence)
-            reference_embedding = list(self.embed(sentence_).numpy())
-            sim_score = 0
-            for (hyp, ref) in zip(hypothesis_embedding, reference_embedding):
-                sim_score += dot(hyp, ref) / (norm(hyp) * norm(ref))
-            sim_score = sim_score / batch_size
+            # hypothesis_embedding = list(self.embed(sentence_).numpy())
+            # sentence_ = []
+            # for i in range(batch_size):
+            #     sentence = ''
+            #     for j in range(seq_len):
+            #         sentence += batch_loader_2.decode_word(target[i,j])
+            #         sentence += ' '
+            #     sentence = sentence.split(' </s>')[0]
+            #     sentence_.append(sentence)
+            # reference_embedding = list(self.embed(sentence_).numpy())
+            sim_score = 1
+            # for (hyp, ref) in zip(hypothesis_embedding, reference_embedding):
+            #     sim_score += dot(hyp, ref) / (norm(hyp) * norm(ref))
+            # sim_score = sim_score / batch_size
             
             # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
@@ -222,7 +224,7 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 79 * cross_entropy + coef * kld + (1-sim_score)  # 79应该是作者拍脑袋的
+            loss = 79 * cross_entropy + 50 * (1-sim_score) + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递

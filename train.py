@@ -122,6 +122,7 @@ if __name__ == "__main__":
     start_time = time.time()
     
     coef_modulo = 10000
+    sample_modulo = 1000
 
     if int(args.num_iterations/coef_modulo) % 2 == 0:
         args.num_iterations = int(args.num_iterations/coef_modulo) * coef_modulo
@@ -142,7 +143,7 @@ if __name__ == "__main__":
               
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
         
-        if (((iteration % int(coef_modulo/10) == 0)) & (iteration != 0)):
+        if (((iteration % int(coef_modulo/sample_modulo) == 0)) & (iteration != 0)):
             print('\n')
             print('------------TRAIN-------------')
             print('-------------ETA--------------')
@@ -168,7 +169,7 @@ if __name__ == "__main__":
             np.save(save_path+f'/kld_result_npy_{iteration}'.format(args.kld_result), np.array(kld_result))
             print('MODEL SAVED')
 
-        if ((iteration % int(coef_modulo/10) == 0)):
+        if ((iteration % int(coef_modulo/sample_modulo) == 0)):
             index = randint(0, len(data)-1)
             
             ref = data[index]
