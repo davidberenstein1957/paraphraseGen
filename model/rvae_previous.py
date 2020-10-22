@@ -8,8 +8,8 @@ from beam_search import Beam
 from selfModules.embedding import Embedding
 from torch.autograd import Variable
 from utils.functional import fold, parameters_allocation_check
-import tensorflow as tf
-import tensorflow_hub as hub
+# import tensorflow as tf
+# import tensorflow_hub as hub
 from .decoder import Decoder, DecoderResidual, DecoderAttention, DecoderResidualAttention
 from .encoder import Encoder, EncoderHR
 
@@ -190,18 +190,18 @@ class RVAE(nn.Module):
                                         z=None)
 
             # print(logits.size(), target.size())
-            [batch_size, seq_len, _] = logits.size()
-            sentence_ = []
-            for i in range(batch_size):
-                sentence = ''
-                for j in range(seq_len):
-                    sentence += batch_loader_2.sample_word_from_distribution(F.softmax(logits[i,j]).data.cpu().numpy())
-                    sentence += ' '
-                if '</s>' in sentence:
-                    sentence = sentence.split(' </s>')[0]
-                if ' _ ' in sentence:
-                    sentence = sentence.split(' _')[0]
-                sentence_.append(sentence)
+            # [batch_size, seq_len, _] = logits.size()
+            # sentence_ = []
+            # for i in range(batch_size):
+            #     sentence = ''
+            #     for j in range(seq_len):
+            #         sentence += batch_loader_2.sample_word_from_distribution(F.softmax(logits[i,j]).data.cpu().numpy())
+            #         sentence += ' '
+            #     if '</s>' in sentence:
+            #         sentence = sentence.split(' </s>')[0]
+            #     if ' _ ' in sentence:
+            #         sentence = sentence.split(' _')[0]
+            #     sentence_.append(sentence)
             # hypothesis_embedding = list(self.embed(sentence_).numpy())
             # sentence_ = []
             # for i in range(batch_size):
