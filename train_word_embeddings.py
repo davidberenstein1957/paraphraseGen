@@ -41,6 +41,9 @@ if __name__ == "__main__":
         batch_loader.max_seq_len,
         batch_loader.words_vocab_size,
         batch_loader.chars_vocab_size,
+        data_name,
+        False,
+        False
     )
 
     neg_loss = NEG_loss(params.word_vocab_size, params.word_embed_size)
