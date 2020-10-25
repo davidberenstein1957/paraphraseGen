@@ -17,7 +17,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--batch-size", type=int, default=10, metavar="BS", help="batch size (default: 10)")
     parser.add_argument("--num-sample", type=int, default=5, metavar="NS", help="num sample (default: 5)")
-    parser.add_argument("--use-cuda", type=bool, default=False, metavar="CUDA", help="use cuda (default: False)")
+    parser.add_argument("--use-cuda", type=bool, default=True, metavar="CUDA", help="use cuda (default: False)")
     args = parser.parse_args()
 
     data_name = "quora"  # quora, mscoco, both
