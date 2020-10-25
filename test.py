@@ -26,6 +26,9 @@ if __name__ == "__main__":
     parser.add_argument("--beam-top", type=int, default=3, metavar="NS", help="beam top (default: 1)")
     parser.add_argument("--beam-size", type=int, default=10, metavar="NS", help="beam size (default: 10)")
     parser.add_argument("--use-file", type=bool, default=True, metavar="NS", help="use file (default: False)")
+    parser.add_argument("--hrvae", type=bool, default=False)
+    parser.add_argument("--attn-model", type=bool, default=False)
+    parser.add_argument("--res-model", type=bool, default=False)
     # Path to test file ---
     parser.add_argument(
         "--test-file", type=str, default=path + "data/test.txt", metavar="NS", help="test file path (default: data/test.txt)"
@@ -68,6 +71,9 @@ if __name__ == "__main__":
         batch_loader.max_seq_len,
         batch_loader.words_vocab_size,
         batch_loader.chars_vocab_size,
+        args.attn_model,
+        args.res_model,
+        args.hrvae,
     )
 
     """ ============================ BatchLoader for Question-2 ===============================================
@@ -83,6 +89,9 @@ if __name__ == "__main__":
         batch_loader_2.max_seq_len,
         batch_loader_2.words_vocab_size,
         batch_loader_2.chars_vocab_size,
+        args.attn_model,
+        args.res_model,
+        args.hrvae,
     )
 
     """ ==================================== Parameters Initialising ===========================================
