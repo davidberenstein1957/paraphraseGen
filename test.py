@@ -16,7 +16,7 @@ from utils.tensor import preprocess_data
 
 if __name__ == "__main__":
 
-    assert os.path.exists("./trained_RVAE"), "trained model not found"
+    # assert os.path.exists("./trained_RVAE"), "trained model not found"
     save_path = "/content/drive/My Drive/thesis/"
     path = "paraphraseGen/"
     parser = argparse.ArgumentParser(description="Sampler")
