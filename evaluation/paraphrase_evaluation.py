@@ -3,6 +3,7 @@ from typing import List
 import pyter
 import tensorflow as tf
 import tensorflow_hub as hub
+import nltk
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.translate.meteor_score import meteor_score
 from numpy import dot
@@ -11,6 +12,10 @@ from rouge import Rouge
 
 
 def get_evaluation_scores(hypothesis: List[List[str]], reference: List[str]) -> dict:
+    try:
+        nltk.download('wordnet')
+    except:
+        pass
     score_overview = dict.fromkeys(["METEOR", "BLUE", "ROUGE", "TER", "MUSE"], [])
     score_overview["BLUE"] = get_blue_score(hypothesis, reference)
     score_overview["METEOR"] = get_meteor_score(hypothesis, reference)
