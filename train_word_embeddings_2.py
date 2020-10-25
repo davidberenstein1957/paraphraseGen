@@ -83,4 +83,4 @@ if __name__ == "__main__":
 
     word_embeddings = neg_loss.input_embeddings()
     # Saves the word embeddings at the end of this programs
-    np.save(f"data/super/word_embeddings_{data_name}.npy", word_embeddings)
+    np.save(path+f"data/super/word_embeddings_{data_name}.npy", word_embeddings)
