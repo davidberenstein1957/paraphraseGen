@@ -9,39 +9,39 @@ from torch.optim import SGD
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    parser = argparse.ArgumentParser(description='word2vec')
-    parser.add_argument('--num-iterations', type=int, default=1000000, metavar='NI',
-                        help='num iterations (default: 1000000)')
-    parser.add_argument('--batch-size', type=int, default=10, metavar='BS',
-                        help='batch size (default: 10)')
-    parser.add_argument('--num-sample', type=int, default=5, metavar='NS',
-                        help='num sample (default: 5)')
-    parser.add_argument('--use-cuda', type=bool, default=False, metavar='CUDA',
-                        help='use cuda (default: False)')
+    parser = argparse.ArgumentParser(description="word2vec")
+    parser.add_argument(
+        "--num-iterations", type=int, default=1000000, metavar="NI", help="num iterations (default: 1000000)"
+    )
+    parser.add_argument("--batch-size", type=int, default=10, metavar="BS", help="batch size (default: 10)")
+    parser.add_argument("--num-sample", type=int, default=5, metavar="NS", help="num sample (default: 5)")
+    parser.add_argument("--use-cuda", type=bool, default=False, metavar="CUDA", help="use cuda (default: False)")
     args = parser.parse_args()
 
-    path = ''
+    data_name = "quora"  # quora, mscoco, both
 
-    data_files = [path + 'data/train.txt',
-                  path + 'data/test.txt']
+    path = ""
 
-    idx_files = [path + 'data/words_vocab.pkl',
-                 path + 'data/characters_vocab.pkl']
+    data_files = [path + f"data/train_{data_name}.txt", path + f"data/test_{data_name}.txt"]
 
-    tensor_files = [[path + 'data/train_word_tensor.npy',
-                     path + 'data/valid_word_tensor.npy'],
-                    [path + 'data/train_character_tensor.npy',
-                     path + 'data/valid_character_tensor.npy']]
+    idx_files = [path + f"data/words_vocab_{data_name}.pkl", path + f"data/characters_vocab_{data_name}.pkl"]
+
+    tensor_files = [
+        [path + f"data/train_word_tensor_{data_name}.npy", path + f"data/valid_word_tensor_{data_name}.npy"],
+        [path + f"data/train_character_tensor_{data_name}.npy", path + f"data/valid_character_tensor_{data_name}.npy"],
+    ]
 
     batch_loader = BatchLoader(data_files, idx_files, tensor_files, path)
 
     # batch_loader = BatchLoader('')
-    params = Parameters(batch_loader.max_word_len,
-                        batch_loader.max_seq_len,
-                        batch_loader.words_vocab_size,
-                        batch_loader.chars_vocab_size)
+    params = Parameters(
+        batch_loader.max_word_len,
+        batch_loader.max_seq_len,
+        batch_loader.words_vocab_size,
+        batch_loader.chars_vocab_size,
+    )
 
     neg_loss = NEG_loss(params.word_vocab_size, params.word_embed_size)
 
@@ -68,8 +68,8 @@ if __name__ == '__main__':
 
         if iteration % 500 == 0:
             out = out.cpu().data.numpy()
-            print('iteration = {}, loss = {}'.format(iteration, out))
+            print("iteration = {}, loss = {}".format(iteration, out))
 
     word_embeddings = neg_loss.input_embeddings()
     # Saves the word embeddings at the end of this programs
-    np.save('data/word_embeddings.npy', word_embeddings)
+    np.save(f"data/word_embeddings_{data_name}.npy", word_embeddings)

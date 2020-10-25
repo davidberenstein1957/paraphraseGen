@@ -16,6 +16,7 @@ tensorflow = "<2.0,>=1.15"
 install = "*"
 nltk = "*"
 ipykernel = "*"
+pycocotools = "*"
 
 [requires]
 python_version = "3.7"

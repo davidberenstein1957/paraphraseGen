@@ -29,6 +29,11 @@ if __name__ == "__main__":
     parser.add_argument("--hrvae", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
+    data_name = "quora"  # quora, mscoco, both
+    parser.add_argument("--data_name", type=str, default=data_name)  # quora, mscoco, both
+    embeddings_name = "quora"  # quora, mscoco, both
+    parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, mscoco, both
+
     # Path to test file ---
     parser.add_argument(
         "--test-file", type=str, default=path + "data/test.txt", metavar="NS", help="test file path (default: data/test.txt)"
@@ -43,10 +48,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Removing, is already some previous files exist from last execution of program
-    if os.path.exists("data/test_word_tensor.npy"):
-        os.remove("data/test_word_tensor.npy")
-    if os.path.exists("data/test_character_tensor.npy"):
-        os.remove("data/test_character_tensor.npy")
+    # if os.path.exists("data/test_word_tensor.npy"):
+    #     os.remove("data/test_word_tensor.npy")
+    # if os.path.exists("data/test_character_tensor.npy"):
+    #     os.remove("data/test_character_tensor.npy")
 
     str = ""
     if not args.use_file:
@@ -59,9 +64,9 @@ if __name__ == "__main__":
     """
     data_files = [args.test_file]
 
-    idx_files = [path + "data/words_vocab.pkl", path + "data/characters_vocab.pkl"]
+    idx_files = [path + f"data/words_vocab_{embeddings_name}.pkl", path + f"data/characters_vocab_{embeddings_name}.pkl"]
 
-    tensor_files = [[path + "data/test_word_tensor.npy"], [path + "data/test_character_tensor.npy"]]
+    tensor_files = [[path + f"data/test_word_tensor_{embeddings_name}.npy"], [path + f"data/test_character_tensor_{embeddings_name}.npy"]]
 
     preprocess_data(data_files, idx_files, tensor_files, args.use_file, str)
 
@@ -71,25 +76,25 @@ if __name__ == "__main__":
         batch_loader.max_seq_len,
         batch_loader.words_vocab_size,
         batch_loader.chars_vocab_size,
-        args.attn_model,
+        embeddings_name,
         args.res_model,
         args.hrvae,
     )
 
     """ ============================ BatchLoader for Question-2 ===============================================
     """
-    data_files = [path + "data/super/train_2.txt"]
+    data_files = [path + f"data/super/train_{data_name}_2.txt"]
 
-    idx_files = [path + "data/super/words_vocab_2.pkl", path + "data/super/characters_vocab_2.pkl"]
+    idx_files = [path + f"data/super/words_vocab_{embeddings_name}_2.pkl", path + f"data/super/characters_vocab_{embeddings_name}_2.pkl"]
 
-    tensor_files = [[path + "data/super/train_word_tensor_2.npy"], [path + "data/super/train_character_tensor_2.npy"]]
+    tensor_files = [[path + f"data/super/train_word_tensor_{embeddings_name}_2.npy"], [path + f"data/super/train_character_tensor_{embeddings_name}_2.npy"]]
     batch_loader_2 = BatchLoader(data_files, idx_files, tensor_files)
     parameters_2 = Parameters(
         batch_loader_2.max_word_len,
         batch_loader_2.max_seq_len,
         batch_loader_2.words_vocab_size,
         batch_loader_2.chars_vocab_size,
-        args.attn_model,
+        embeddings_name,
         args.res_model,
         args.hrvae,
     )

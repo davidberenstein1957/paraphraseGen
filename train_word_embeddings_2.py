@@ -6,9 +6,9 @@ import torch as t
 from torch.autograd import Variable
 from torch.optim import SGD
 
+from selfModules.neg import NEG_loss
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
-from selfModules.neg import NEG_loss
 
 if __name__ == '__main__':
 
@@ -23,21 +23,20 @@ if __name__ == '__main__':
                         help='use cuda (default: True)')
     args = parser.parse_args()
 
-
-
+    data_name = "quora"  # quora, mscoco, both
 
     path=''
 
-    data_files = [path + 'data/super/train_2.txt',
-                       path + 'data/super/test_2.txt']
+    data_files = [path + f'data/super/train_{data_name}_2.txt',
+                       path + f'data/super/test_{data_name}_2.txt']
 
-    idx_files = [path + 'data/super/words_vocab_2.pkl',
-                      path + 'data/super/characters_vocab_2.pkl']
+    idx_files = [path + f'data/super/words_vocab_{data_name}_2.pkl',
+                      path + f'data/super/characters_vocab_{data_name}_2.pkl']
 
-    tensor_files = [[path + 'data/super/train_word_tensor_2.npy',
-                          path + 'data/super/valid_word_tensor_2.npy'],
-                         [path + 'data/super/train_character_tensor_2.npy',
-                          path + 'data/super/valid_character_tensor_2.npy']]
+    tensor_files = [[path + f'data/super/train_word_tensor_{data_name}_2.npy',
+                          path + f'data/super/valid_word_tensor_{data_name}_2.npy'],
+                         [path + f'data/super/train_character_tensor_{data_name}_2.npy',
+                          path + f'data/super/valid_character_tensor_{data_name}_2.npy']]
     batch_loader_2 = BatchLoader(data_files, idx_files, tensor_files, path)
 
 
@@ -77,4 +76,4 @@ if __name__ == '__main__':
 
     word_embeddings = neg_loss.input_embeddings()
     #Saves the word embeddings at the end of this programs
-    np.save('data/super/word_embeddings.npy', word_embeddings)
+    np.save(f'data/super/word_embeddings_{data_name}.npy', word_embeddings)
