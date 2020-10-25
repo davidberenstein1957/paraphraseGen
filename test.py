@@ -135,10 +135,7 @@ if __name__ == "__main__":
         hyp__ = []
         ref_ = []
         for i in range(len(data))[:10]:
-            # if args.use_file:
-            #     print("original sentence:     " + data[i])
-            # else:
-            #     print("original sentence:     " + str + "\n")
+
             ref_.append(data[i])
             hyp_ = []
             for iteration in range(args.num_sample):
@@ -159,7 +156,6 @@ if __name__ == "__main__":
                             # print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
-            # print("\n")
 
         scores = get_evaluation_scores(hyp__, ref_)
         meteor_result.append(statistics.mean(scores["METEOR"]))
@@ -167,4 +163,11 @@ if __name__ == "__main__":
         rouge_result.append(statistics.mean(scores["ROUGE"]))
         ter_result.append(statistics.mean(scores["TER"]))
         muse_result.append(statistics.mean(scores["MUSE"]))
-        print(muse_result)
+    
+    np.save(save_path + f"meteor_result.npy", np.array(meteor_result))
+    np.save(save_path + f"blue_result", np.array(blue_result))
+    np.save(save_path + f"rouge_result.npy", np.array(rouge_result))
+    np.save(save_path + f"ter_result", np.array(ter_result))
+    np.save(save_path + f"muse_result", np.array(muse_result))
+
+    

@@ -127,9 +127,7 @@ if __name__ == "__main__":
         args.num_iterations = (int(args.num_iterations / coef_modulo) + 1) * coef_modulo
 
     for iteration in range(args.num_iterations):
-        # This needs to be changed ##这一步必须保证不大于训练数据数量-每一批数据的大小，否则越界报错######################
         start_index = (start_index + args.batch_size) % (modulo_operator)
-        # start_index = (start_index+args.batch_size)%149163 #计算交叉熵损失，等
 
         if args.annealing == "cyc":
             coef = kld_coef_cyc(iteration, coef_modulo)
@@ -162,8 +160,8 @@ if __name__ == "__main__":
 
         if (iteration % coef_modulo == 0) & (iteration != 0):
             t.save(rvae.state_dict(), save_path + f"/trained_RVAE_{iteration}")
-            np.save(save_path + f"/ce_result_{iteration}.npy".format(args.ce_result), np.array(ce_result))
-            np.save(save_path + f"/kld_result_npy_{iteration}.npy".format(args.kld_result), np.array(kld_result))
+            # np.save(save_path + f"/ce_result_{iteration}.npy".format(args.ce_result), np.array(ce_result))
+            # np.save(save_path + f"/kld_result_npy_{iteration}.npy".format(args.kld_result), np.array(kld_result))
             print("MODEL SAVED")
 
         if iteration % int(sample_modulo) == 0:
