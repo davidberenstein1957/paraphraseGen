@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     data_name = "quora"  # quora, mscoco, both
 
-    path = ""
+    path = "paraphraseGen/"
 
     data_files = [path + f"data/train_{data_name}.txt", path + f"data/test_{data_name}.txt"]
 

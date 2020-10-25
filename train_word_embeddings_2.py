@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     data_name = "quora"  # quora, mscoco, both
 
-    path=''
+    path='paraphraseGen/'
 
     data_files = [path + f'data/super/train_{data_name}_2.txt',
                        path + f'data/super/test_{data_name}_2.txt']
