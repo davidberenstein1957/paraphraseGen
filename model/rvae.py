@@ -143,7 +143,7 @@ class RVAE(nn.Module):
         """ creates a gradients for each parameter in the class to be optimized """
         return [p for p in self.parameters() if p.requires_grad]
 
-    def trainer(self, optimizer: object, batch_loader: object, batch_loader_2: object) -> objet:
+    def trainer(self, optimizer: object, batch_loader: object, batch_loader_2: object) -> object:
         def train(coef: float, batch_size: int, use_cuda: bool, dropout: float, start_index: int) -> tuple:
             """ train the encoder/decoder step by step via train() """
             input = batch_loader.next_batch(batch_size, 'train', start_index)
