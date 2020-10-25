@@ -18,6 +18,7 @@ if __name__ == "__main__":
 
     assert os.path.exists("./trained_RVAE"), "trained model not found"
     save_path = "/content/drive/My Drive/thesis/"
+    path = "paraphraseGen/"
     parser = argparse.ArgumentParser(description="Sampler")
     parser.add_argument("--use-cuda", type=bool, default=True, metavar="CUDA", help="use cuda (default: True)")
     parser.add_argument("--num-sample", type=int, default=5, metavar="NS", help="num samplings (default: 5)")
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-file", type=bool, default=True, metavar="NS", help="use file (default: False)")
     # Path to test file ---
     parser.add_argument(
-        "--test-file", type=str, default="data/test.txt", metavar="NS", help="test file path (default: data/test.txt)"
+        "--test-file", type=str, default=path + "data/test.txt", metavar="NS", help="test file path (default: data/test.txt)"
     )
     parser.add_argument(
         "--save-model",
@@ -55,9 +56,9 @@ if __name__ == "__main__":
     """
     data_files = [args.test_file]
 
-    idx_files = ["data/words_vocab.pkl", "data/characters_vocab.pkl"]
+    idx_files = [path + "data/words_vocab.pkl", path + "data/characters_vocab.pkl"]
 
-    tensor_files = [["data/test_word_tensor.npy"], ["data/test_character_tensor.npy"]]
+    tensor_files = [[path + "data/test_word_tensor.npy"], [path + "data/test_character_tensor.npy"]]
 
     preprocess_data(data_files, idx_files, tensor_files, args.use_file, str)
 
@@ -71,11 +72,11 @@ if __name__ == "__main__":
 
     """ ============================ BatchLoader for Question-2 ===============================================
     """
-    data_files = ["data/super/train_2.txt"]
+    data_files = [path + "data/super/train_2.txt"]
 
-    idx_files = ["data/super/words_vocab_2.pkl", "data/super/characters_vocab_2.pkl"]
+    idx_files = [path + "data/super/words_vocab_2.pkl", path + "data/super/characters_vocab_2.pkl"]
 
-    tensor_files = [["data/super/train_word_tensor_2.npy"], ["data/super/train_character_tensor_2.npy"]]
+    tensor_files = [[path + "data/super/train_word_tensor_2.npy"], [path + "data/super/train_character_tensor_2.npy"]]
     batch_loader_2 = BatchLoader(data_files, idx_files, tensor_files)
     parameters_2 = Parameters(
         batch_loader_2.max_word_len,
