@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
         hyp__ = []
         ref_ = []
-        for i in range(len(data)):
+        for i in range(len(data))[:10]:
             # if args.use_file:
             #     print("original sentence:     " + data[i])
             # else:
@@ -167,3 +167,4 @@ if __name__ == "__main__":
         rouge_result.append(statistics.mean(scores["ROUGE"]))
         ter_result.append(statistics.mean(scores["TER"]))
         muse_result.append(statistics.mean(scores["MUSE"]))
+        print(muse_result)
