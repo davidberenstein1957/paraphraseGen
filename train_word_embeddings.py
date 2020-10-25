@@ -3,9 +3,10 @@ import argparse
 
 import numpy as np
 import torch as t
-from selfModules.neg import NEG_loss
 from torch.autograd import Variable
 from torch.optim import SGD
+
+from selfModules.neg import NEG_loss
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
 
@@ -18,9 +19,10 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=10, metavar="BS", help="batch size (default: 10)")
     parser.add_argument("--num-sample", type=int, default=5, metavar="NS", help="num sample (default: 5)")
     parser.add_argument("--use-cuda", type=bool, default=True, metavar="CUDA", help="use cuda (default: False)")
+    parser.add_argument("--data-name", type=str, default="both", metavar="CUDA", help="use cuda (default: False)")
     args = parser.parse_args()
 
-    data_name = "quora"  # quora, mscoco, both
+    data_name = args.data_name  # quora, mscoco, both
 
     path = "paraphraseGen/"
 
@@ -43,7 +45,7 @@ if __name__ == "__main__":
         batch_loader.chars_vocab_size,
         data_name,
         False,
-        False
+        False,
     )
 
     neg_loss = NEG_loss(params.word_vocab_size, params.word_embed_size)
@@ -75,4 +77,4 @@ if __name__ == "__main__":
 
     word_embeddings = neg_loss.input_embeddings()
     # Saves the word embeddings at the end of this programs
-    np.save(path+f"data/word_embeddings_{data_name}.npy", word_embeddings)
+    np.save(path + f"data/word_embeddings_{data_name}.npy", word_embeddings)

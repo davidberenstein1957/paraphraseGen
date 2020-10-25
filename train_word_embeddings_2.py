@@ -19,9 +19,10 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=10, metavar="BS", help="batch size (default: 10)")
     parser.add_argument("--num-sample", type=int, default=5, metavar="NS", help="num sample (default: 5)")
     parser.add_argument("--use-cuda", type=bool, default=True, metavar="CUDA", help="use cuda (default: True)")
+    parser.add_argument("--data-name", type=str, default="both", metavar="CUDA", help="use cuda (default: False)")
     args = parser.parse_args()
 
-    data_name = "quora"  # quora, mscoco, both
+    data_name = data_name = args.data_name  # quora, mscoco, both
 
     path = "paraphraseGen/"
 
@@ -83,4 +84,4 @@ if __name__ == "__main__":
 
     word_embeddings = neg_loss.input_embeddings()
     # Saves the word embeddings at the end of this programs
-    np.save(path+f"data/super/word_embeddings_{data_name}.npy", word_embeddings)
+    np.save(path + f"data/super/word_embeddings_{data_name}.npy", word_embeddings)
