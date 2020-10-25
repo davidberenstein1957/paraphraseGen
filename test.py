@@ -112,7 +112,7 @@ if __name__ == "__main__":
     """======================================== MODEL loading ================================================= """
     print("Started loading")
     start_time = time.time()
-    rvae = RVAE(parameters, parameters_2)
+    rvae = RVAE(parameters, parameters_2, path)
     num_training_iters = 120000
     coef_modulo = 10000
 
