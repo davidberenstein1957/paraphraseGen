@@ -135,10 +135,10 @@ if __name__ == "__main__":
         hyp__ = []
         ref_ = []
         for i in range(len(data)):
-            if args.use_file:
-                print("original sentence:     " + data[i])
-            else:
-                print("original sentence:     " + str + "\n")
+            # if args.use_file:
+            #     print("original sentence:     " + data[i])
+            # else:
+            #     print("original sentence:     " + str + "\n")
             ref_.append(data[i])
             hyp_ = []
             for iteration in range(args.num_sample):
@@ -153,10 +153,10 @@ if __name__ == "__main__":
                     for k in range(n_best):
                         sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
                         if batch_loader.end_token in sen:
-                            print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
+                            # print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
                             hyp_.append(sen[: sen.index(batch_loader.end_token)])
                         else:
-                            print("generate sentence:     " + sen)
+                            # print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
             print("\n")
