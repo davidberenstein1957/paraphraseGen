@@ -19,15 +19,14 @@ import torch
 class Beam(object):
     """Ordered beam of candidate outputs."""
 
-    def __init__(self, size, batch_loader, cuda=False):
+    def __init__(self, size: int, batch_loader, cuda=False):
         """Initialize params."""
         self.size = size
         self.done = False
         self.pad = batch_loader.word_to_idx[batch_loader.pad_token]
         self.bos = batch_loader.word_to_idx[batch_loader.go_token]
         self.eos = batch_loader.word_to_idx[batch_loader.end_token]
-        
-        
+
         self.tt = torch.cuda if cuda else torch
 
         # The score for each translation on the beam.
@@ -117,6 +116,6 @@ class Beam(object):
         for j in range(len(self.prevKs) - 1, -1, -1):
             hyp.append(self.nextYs[j + 1][k])
             k = self.prevKs[j][k]
-#         print "inside:", hyp
-        
+        #         print "inside:", hyp
+
         return hyp[::-1]

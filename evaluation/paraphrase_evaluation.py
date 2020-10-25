@@ -67,7 +67,6 @@ def get_ter_score(hypothesis: List[List[str]], reference: List[str]) -> list:
 def get_muse_score(hypothesis: List[List[str]], reference: List[str]) -> list:
     embed = hub.load("https://tfhub.dev/google/universal-sentence-encoder-large/5")
     reference_embedding = list(embed(reference).numpy())
-    print(reference_embedding)
     sim_score_list = []
     for (hyps, ref) in zip(hypothesis, reference_embedding):
         hyps_embedding = list(embed(hyps).numpy())

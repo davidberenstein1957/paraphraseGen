@@ -2,8 +2,8 @@
 
 import collections
 import os
-import re
 import random
+import re
 
 import numpy as np
 from six.moves import cPickle
@@ -12,122 +12,111 @@ from .functional import *
 
 
 class BatchLoader:
-    def __init__(self, data_files, idx_files, tensor_files, path='../../'):
-        '''
-            :properties
+    def __init__(self, data_files: list, idx_files: list, tensor_files: list, path: str = "../../") -> None:
+        """
+        :properties
 
-                data_files - array containing paths to data sources
+            data_files - array containing paths to data sources
 
-                idx_files - array of paths to vocabulury files
+            idx_files - array of paths to vocabulury files
 
-                tensor_files - matrix with shape of [2, target_num] containing paths to files
-                    with data represented as tensors
-                    where first index in shape corresponds to types of representation of data,
-                    i.e. word representation and character-aware representation
+            tensor_files - matrix with shape of [2, target_num] containing paths to files
+                with data represented as tensors
+                where first index in shape corresponds to types of representation of data,
+                i.e. word representation and character-aware representation
 
-                blind_symbol - special symbol to fill spaces in every word in character-aware representation
-                    to make all words be the same lenght
-                pad_token - the same special symbol as blind_symbol, but in case of lines of words
-                go_token - start of sequence symbol
-                end_token - end of sequence symbol
+            blind_symbol - special symbol to fill spaces in every word in character-aware representation
+                to make all words be the same lenght
+            pad_token - the same special symbol as blind_symbol, but in case of lines of words
+            go_token - start of sequence symbol
+            end_token - end of sequence symbol
 
-                chars_vocab_size - number of unique characters
+            chars_vocab_size - number of unique characters
+            idx_to_char - array of shape [chars_vocab_size] containing ordered list of inique characters
+            char_to_idx - dictionary of shape [chars_vocab_size]
+                such that idx_to_char[char_to_idx[some_char]] = some_char
+                where some_char is such that idx_to_char contains it
+
+            words_vocab_size, idx_to_word, word_to_idx - same as for characters
+
+            max_word_len - maximum word length
+            max_seq_len - maximum sequence length
+            num_lines - num of lines in data with shape [target_num]
+
+            word_tensor -  tensor of shape [target_num, num_lines, line_lenght] c
+                ontains word's indexes instead of words itself
+
+            character_tensor - tensor of shape [target_num, num_lines, line_lenght, max_word_len].
+                Rows contain character indexes for every word in data
+
+        :methods
+
+            build_character_vocab(self, data) -> chars_vocab_size, idx_to_char, char_to_idx
+                chars_vocab_size - size of unique characters in corpus
                 idx_to_char - array of shape [chars_vocab_size] containing ordered list of inique characters
                 char_to_idx - dictionary of shape [chars_vocab_size]
                     such that idx_to_char[char_to_idx[some_char]] = some_char
                     where some_char is such that idx_to_char contains it
 
-                words_vocab_size, idx_to_word, word_to_idx - same as for characters
+            build_word_vocab(self, sentences) -> words_vocab_size, idx_to_word, word_to_idx
+                same as for characters
 
-                max_word_len - maximum word length
-                max_seq_len - maximum sequence length
-                num_lines - num of lines in data with shape [target_num]
+            preprocess(self, data_files, idx_files, tensor_files) -> Void
+                preprocessed and initialized properties and then save them
 
-                word_tensor -  tensor of shape [target_num, num_lines, line_lenght] c
-                    ontains word's indexes instead of words itself
+            load_preprocessed(self, data_files, idx_files, tensor_files) -> Void
+                load and and initialized properties
 
-                character_tensor - tensor of shape [target_num, num_lines, line_lenght, max_word_len].
-                    Rows contain character indexes for every word in data
-
-            :methods
-
-                build_character_vocab(self, data) -> chars_vocab_size, idx_to_char, char_to_idx
-                    chars_vocab_size - size of unique characters in corpus
-                    idx_to_char - array of shape [chars_vocab_size] containing ordered list of inique characters
-                    char_to_idx - dictionary of shape [chars_vocab_size]
-                        such that idx_to_char[char_to_idx[some_char]] = some_char
-                        where some_char is such that idx_to_char contains it
-
-                build_word_vocab(self, sentences) -> words_vocab_size, idx_to_word, word_to_idx
-                    same as for characters
-
-                preprocess(self, data_files, idx_files, tensor_files) -> Void
-                    preprocessed and initialized properties and then save them
-
-                load_preprocessed(self, data_files, idx_files, tensor_files) -> Void
-                    load and and initialized properties
-
-                next_batch(self, batch_size, target_str) -> encoder_word_input, encoder_character_input, input_seq_len,
-                        decoder_input, decoder_output
-                    randomly sampled batch_size num of sequences for target from target_str.
-                    fills sequences with pad tokens to made them the same lenght.
-                    encoder_word_input and encoder_character_input have reversed order of the words
-                        in case of performance
-        '''
+            next_batch(self, batch_size, target_str) -> encoder_word_input, encoder_character_input, input_seq_len,
+                    decoder_input, decoder_output
+                randomly sampled batch_size num of sequences for target from target_str.
+                fills sequences with pad tokens to made them the same lenght.
+                encoder_word_input and encoder_character_input have reversed order of the words
+                    in case of performance
+        """
 
         self.data_files = data_files
         self.idx_files = idx_files
         self.tensor_files = tensor_files
 
-        self.blind_symbol = ''
-        self.pad_token = '_'
-        self.go_token = '<s>'
-        self.end_token = '</s>'
-        # self.unk_token = '<u>'
+        self.blind_symbol = ""
+        self.pad_token = "_"
+        self.go_token = "<s>"
+        self.end_token = "</s>"
 
-        idx_exists = fold(f_and,
-                          [os.path.exists(file) for file in self.idx_files],
-                          True)
+        idx_exists = fold(f_and, [os.path.exists(file) for file in self.idx_files], True)
 
-        tensors_exists = fold(f_and,
-                              [os.path.exists(file) for target in self.tensor_files
-                               for file in target],
-                              True)
+        tensors_exists = fold(f_and, [os.path.exists(file) for target in self.tensor_files for file in target], True)
 
         if idx_exists and tensors_exists:
-            self.load_preprocessed(self.data_files,
-                                   self.idx_files,
-                                   self.tensor_files)
-            print('preprocessed data was found and loaded')
+            self.load_preprocessed(self.data_files, self.idx_files, self.tensor_files)
+            print("preprocessed data was found and loaded")
         else:
-            self.preprocess(self.data_files,
-                            self.idx_files,
-                            self.tensor_files)
-            print('data have preprocessed')
+            self.preprocess(self.data_files, self.idx_files, self.tensor_files)
+            print("data have preprocessed")
 
         self.word_embedding_index = 0
 
-    def clean_whole_data(self, string):
-        string = re.sub(r'^[\d\:]+ ', '', string, 0, re.M)
-        string = re.sub(r'\n\s{11}', ' ', string, 0, re.M)
-        string = re.sub(r'\n{2}', '\n', string, 0, re.M)
+    def clean_whole_data(self, string: str) -> str:
+        """ clean data for basic string operation like \n \s etc. """
+        string = re.sub(r"^[\d\:]+ ", "", string, 0, re.M)
+        string = re.sub(r"\n\s{11}", " ", string, 0, re.M)
+        string = re.sub(r"\n{2}", "\n", string, 0, re.M)
 
         return string.lower()
 
-    def clean_str(self, string):
-        '''
-            Tokenization/string cleaning for all datasets except for SST.
-            Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data
-
-        '''
-
+    def clean_str(self, string: str) -> str:
+        """
+        Tokenization/string cleaning for all datasets except for SST.
+        Original taken from https://github.com/yoonkim/CNN_sentence/blob/master/process_data
+        """
         string = re.sub(r"[^가-힣A-Za-z0-9(),!?:;.\'\`]", " ", string)
-        string = re.sub(r"\'s", " \'s", string)
-        string = re.sub(r"\'ve", " \'ve", string)
-        string = re.sub(r"n\'t", " n\'t", string)
-        string = re.sub(r"\'re", " \'re", string)
-        string = re.sub(r"\'d", " \'d", string)
-        string = re.sub(r"\'ll", " \'ll", string)
+        string = re.sub(r"\'s", " 's", string)
+        string = re.sub(r"\'ve", " 've", string)
+        string = re.sub(r"n\'t", " n't", string)
+        string = re.sub(r"\'re", " 're", string)
+        string = re.sub(r"\'d", " 'd", string)
+        string = re.sub(r"\'ll", " 'll", string)
         string = re.sub(r"\.", " . ", string)
         string = re.sub(r",", " , ", string)
         string = re.sub(r":", " : ", string)
@@ -139,7 +128,8 @@ class BatchLoader:
         string = re.sub(r"\s{2,}", " ", string)
         return string.strip()
 
-    def build_character_vocab(self, data):
+    def build_character_vocab(self, data: str) -> (int, list, dict):
+        """[summary] creates a unique vocabulary for all characters in the data """
 
         # unique characters with blind symbol
         chars = list(set(data)) + [self.blind_symbol, self.pad_token, self.go_token, self.end_token]
@@ -152,6 +142,7 @@ class BatchLoader:
         return chars_vocab_size, idx_to_char, char_to_idx
 
     def build_word_vocab(self, sentences):
+        """[summary] creates a unique vocabulary for all characters in the data """
 
         # Build vocabulary
         word_counts = collections.Counter(sentences)
@@ -170,14 +161,14 @@ class BatchLoader:
     def preprocess(self, data_files, idx_files, tensor_files):
 
         data = [open(file, "r").read() for file in data_files]
-        merged_data = data[0] + '\n' + data[1]
+        merged_data = data[0] + "\n" + data[1]
 
         self.chars_vocab_size, self.idx_to_char, self.char_to_idx = self.build_character_vocab(merged_data)
 
-        with open(idx_files[1], 'wb') as f:
+        with open(idx_files[1], "wb") as f:
             cPickle.dump(self.idx_to_char, f)
 
-        data_words = [[line.split() for line in target.split('\n')] for target in data]
+        data_words = [[line.split() for line in target.split("\n")] for target in data]
         merged_data_words = merged_data.split()
 
         self.words_vocab_size, self.idx_to_word, self.word_to_idx = self.build_word_vocab(merged_data_words)
@@ -185,17 +176,19 @@ class BatchLoader:
         self.max_seq_len = np.amax([len(line) for target in data_words for line in target])
         self.num_lines = [len(target) for target in data_words]
 
-        with open(idx_files[0], 'wb') as f:
+        with open(idx_files[0], "wb") as f:
             cPickle.dump(self.idx_to_word, f)
 
         self.word_tensor = np.array(
-            [[list(map(self.word_to_idx.get, line)) for line in target] for target in data_words])
+            [[list(map(self.word_to_idx.get, line)) for line in target] for target in data_words]
+        )
         print(self.word_tensor.shape)
         for i, path in enumerate(tensor_files[0]):
             np.save(path, self.word_tensor[i])
 
         self.character_tensor = np.array(
-            [[list(map(self.encode_characters, line)) for line in target] for target in data_words])
+            [[list(map(self.encode_characters, line)) for line in target] for target in data_words]
+        )
         for i, path in enumerate(tensor_files[1]):
             np.save(path, self.character_tensor[i])
 
@@ -204,7 +197,7 @@ class BatchLoader:
     def load_preprocessed(self, data_files, idx_files, tensor_files):
 
         data = [open(file, "r").read() for file in data_files]
-        data_words = [[line.split() for line in target.split('\n')] for target in data]
+        data_words = [[line.split() for line in target.split("\n")] for target in data]
         self.max_seq_len = np.amax([len(line) for target in data_words for line in target])
         self.num_lines = [len(target) for target in data_words]
 
@@ -212,86 +205,71 @@ class BatchLoader:
 
         [self.words_vocab_size, self.chars_vocab_size] = [len(idx) for idx in [self.idx_to_word, self.idx_to_char]]
 
-        [self.word_to_idx, self.char_to_idx] = [dict(zip(idx, range(len(idx)))) for idx in
-                                                [self.idx_to_word, self.idx_to_char]]
+        [self.word_to_idx, self.char_to_idx] = [
+            dict(zip(idx, range(len(idx)))) for idx in [self.idx_to_word, self.idx_to_char]
+        ]
 
         self.max_word_len = np.amax([len(word) for word in self.idx_to_word])
 
         [self.word_tensor, self.character_tensor] = [
-            np.array([np.load(target, allow_pickle=True) for target in input_type]) for input_type in tensor_files]
+            np.array([np.load(target, allow_pickle=True) for target in input_type]) for input_type in tensor_files
+        ]
 
         self.just_words = [word for line in self.word_tensor[0] for word in line]
 
-    def next_batch(self, batch_size, target_str, start_index):
-        #         target = 0 if target_str == 'train' else 1
+    def next_batch(self, batch_size: int, target_str: str, start_index: int) -> tuple:
+        """ creates encoded input output pairs for a given batch  equal to the amount of batches """
         target = 0
-        # indexes = np.array(np.random.randint(self.num_lines[target], size=batch_size))
-        # indexes = np.array([10])
-
-        # print '-----------------Printing ? identity----------------------'
-        # unk_token = self.word_to_idx[self.unk_token]
-        # print temp
-        # print 'DONE!'
-        # exit()
-
-        indexes = np.array(range(start_index, start_index+batch_size))
-        # print '======================'
-        # print indexes
-        # print '======================'
-        # print self.num_lines
-
-#         print 'Printing indexes ------------->'
-#         print indexes
-#         print '-------------------------------'
+        indexes = np.array(range(start_index, start_index + batch_size))
 
         indexes = [index % len(self.word_tensor[target]) for index in indexes]
         encoder_word_input = [self.word_tensor[target][index] for index in indexes]
-
-#         print 'Printing encoder_word_input ------------->'
-#         print encoder_word_input
-        # print '-------------------------------'
 
         encoder_character_input = [self.character_tensor[target][index] for index in indexes]
         input_seq_len = [len(line) for line in encoder_word_input]
         max_input_seq_len = np.amax(input_seq_len)
 
         encoded_words = [[idx for idx in line] for line in encoder_word_input]
-        decoder_word_input = [[self.word_to_idx[self.go_token]] + line for line in encoder_word_input]  # 输入端加上开始标志
-        decoder_character_input = [[self.encode_characters(
-            self.go_token)] + line for line in encoder_character_input]  # 输入端加上开始标志
-        decoder_output = [line + [self.word_to_idx[self.end_token]] for line in encoded_words]  # 输出端加入结束
+        decoder_word_input = [[self.word_to_idx[self.go_token]] + line for line in encoder_word_input]
+        decoder_character_input = [[self.encode_characters(self.go_token)] + line for line in encoder_character_input]
+        decoder_output = [line + [self.word_to_idx[self.end_token]] for line in encoded_words]
 
-        # sorry
-        for i, line in enumerate(decoder_word_input):  # 后面补齐pad-token
+        for i, line in enumerate(decoder_word_input):
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_word_input[i] = line + [self.word_to_idx[self.pad_token]] * to_add
 
-        for i, line in enumerate(decoder_character_input):  # 后面补齐pad-token
+        for i, line in enumerate(decoder_character_input):  #
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_character_input[i] = line + [self.encode_characters(self.pad_token)] * to_add
 
-        for i, line in enumerate(decoder_output):  # 后面补齐pad-token
+        for i, line in enumerate(decoder_output):
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_output[i] = line + [self.word_to_idx[self.pad_token]] * to_add
 
         encoder_input_mask = []
-        for i, line in enumerate(encoder_word_input):  # 把输入的句子倒过来 前面补齐pad-token
+        for i, line in enumerate(encoder_word_input):
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             encoder_word_input[i] = [self.word_to_idx[self.pad_token]] * to_add + line[::-1]
 
-        for i, line in enumerate(encoder_character_input):  # 把输入的句子倒过来 前面补齐pad-token
+        for i, line in enumerate(encoder_character_input):
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             encoder_character_input[i] = [self.encode_characters(self.pad_token)] * to_add + line[::-1]
 
-        return np.array(encoder_word_input), np.array(encoder_character_input), np.array(decoder_word_input), np.array(
-            decoder_character_input), np.array(decoder_output), np.array(encoder_input_mask)
+        return (
+            np.array(encoder_word_input),
+            np.array(encoder_character_input),
+            np.array(decoder_word_input),
+            np.array(decoder_character_input),
+            np.array(decoder_output),
+            np.array(encoder_input_mask),
+        )
 
-    def next_embedding_seq(self, seq_len):
+    def next_embedding_seq(self, seq_len: int) -> (list, list):
         """
         :return:
             tuple of input and output for word embedding learning,
@@ -301,8 +279,10 @@ class BatchLoader:
         """
 
         words_len = len(self.just_words)
-        seq = [self.just_words[i % words_len]
-               for i in np.arange(self.word_embedding_index, self.word_embedding_index + seq_len)]
+        seq = [
+            self.just_words[i % words_len]
+            for i in np.arange(self.word_embedding_index, self.word_embedding_index + seq_len)
+        ]
 
         result = []
         for i in range(seq_len - 2):
@@ -310,41 +290,43 @@ class BatchLoader:
             result.append([seq[i + 1], seq[i + 2]])
 
         self.word_embedding_index = (self.word_embedding_index + seq_len) % words_len - 2
-
-        # input and target
         result = np.array(result)
-        # print result
-        # print "---------------------print is coming --------------"
-        # print len(result[0])
+
         return result[:, 0], result[:, 1]
 
-    def go_input(self, batch_size):
+    def go_input(self, batch_size: int) -> (np.array, np.array):
+        """ creates an empty word and empty sentence begin token for every sentence in the batch """
         go_word_input = [[self.word_to_idx[self.go_token]] for _ in range(batch_size)]
         go_character_input = [[self.encode_characters(self.go_token)] for _ in range(batch_size)]
 
         return np.array(go_word_input), np.array(go_character_input)
 
-    def encode_word(self, idx):
+    def encode_word(self, idx: str) -> int:
+        """ Encodes a word str to word id  """
         result = np.zeros(self.words_vocab_size)
         result[idx] = 1
         return result
 
-    def decode_word(self, word_idx):
+    def decode_word(self, word_idx: int) -> str:
+        """ Decodes a word id to a written string  """
         word = self.idx_to_word[word_idx]
         return word
 
-    def sample_word_from_distribution(self, distribution):
+    def sample_word_from_distribution(self, distribution: object) -> str:
+        """ samples a word from the vocab based on a predicted word distribution """
         ix = np.random.choice(range(self.words_vocab_size), p=distribution.ravel())
         x = np.zeros((self.words_vocab_size, 1))
         x[ix] = 1
         return self.idx_to_word[np.argmax(x)]
 
-    def encode_characters(self, characters):
+    def encode_characters(self, characters: str) -> list:
+        """ Encodes a string of characters t a list of character ids """
         word_len = len(characters)
         to_add = self.max_word_len - word_len
-        characters_idx = [self.char_to_idx[i] for i in characters] + to_add * [self.char_to_idx['']]
+        characters_idx = [self.char_to_idx[i] for i in characters] + to_add * [self.char_to_idx[""]]
         return characters_idx
 
-    def decode_characters(self, characters_idx):
+    def decode_characters(self, characters_idx: list) -> str:
+        """ Decodes a list of character ids to a written string  """
         characters = [self.idx_to_char[i] for i in characters_idx]
-        return ''.join(characters)
+        return "".join(characters)

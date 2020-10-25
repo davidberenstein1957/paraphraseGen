@@ -8,7 +8,7 @@ from utils.functional import *
 
 
 class NEG_loss(nn.Module):
-    def __init__(self, num_classes, embed_size):
+    def __init__(self, num_classes: int, embed_size: int) -> None:
         """
         :param num_classes: An int. The number of possible classes.
         :param embed_size: An int. Embedding size
@@ -25,7 +25,7 @@ class NEG_loss(nn.Module):
         self.in_embed = nn.Embedding(self.num_classes, self.embed_size)
         self.in_embed.weight = Parameter(t.FloatTensor(self.num_classes, self.embed_size).uniform_(-1, 1))
 
-    def forward(self, input_labes, out_labels, num_sampled):
+    def forward(self, input_labels: object, out_labels: object, num_sampled: int) -> float:
         """
         :param input_labes: Tensor with shape of [batch_size] of Long type
         :param out_labels: Tensor with shape of [batch_size] of Long type
@@ -36,17 +36,20 @@ class NEG_loss(nn.Module):
             papers.nips.cc/paper/5021-distributed-representations-of-words-and-phrases-and-their-compositionality.pdf
         """
 
-        assert parameters_allocation_check(self), \
-            """
+        assert parameters_allocation_check(
+            self
+        ), """
             Invalid CUDA options. out_embed and in_embed parameters both should be stored in the same memory
             got out_embed.is_cuda = {}, in_embed.is_cuda = {}
-            """.format(self.out_embed.weight.is_cuda, self.in_embed.weight.is_cuda)
+            """.format(
+            self.out_embed.weight.is_cuda, self.in_embed.weight.is_cuda
+        )
 
         use_cuda = self.out_embed.weight.is_cuda
 
-        [batch_size] = input_labes.size()
+        [batch_size] = input_labels.size()
 
-        input = self.in_embed(input_labes)
+        input = self.in_embed(input_labels)
         output = self.out_embed(out_labels)
 
         noise = Variable(t.Tensor(batch_size, num_sampled).uniform_(0, self.num_classes - 1).long())
@@ -56,13 +59,14 @@ class NEG_loss(nn.Module):
 
         log_target = (input * output).sum(1).squeeze().sigmoid().log()
 
-        ''' âˆ‘[batch_size, num_sampled, embed_size] * [batch_size, embed_size, 1] ->
-            âˆ‘[batch_size, num_sampled] -> [batch_size] '''
+        """ âˆ‘[batch_size, num_sampled, embed_size] * [batch_size, embed_size, 1] ->
+            âˆ‘[batch_size, num_sampled] -> [batch_size] """
         sum_log_sampled = t.bmm(noise, input.unsqueeze(2)).sigmoid().log().sum(1).squeeze()
 
         loss = log_target + sum_log_sampled
 
         return -loss
 
-    def input_embeddings(self):
+    def input_embeddings(self) -> float:
+        """ retrieves a numpy array for embedding weights """
         return self.in_embed.weight.data.cpu().numpy()

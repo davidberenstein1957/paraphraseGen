@@ -1,6 +1,7 @@
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
+
 from selfModules.highway import Highway
 from utils.functional import parameters_allocation_check
 
@@ -15,19 +16,19 @@ class Encoder(nn.Module):
 
         self.hw1 = Highway(self.params.sum_depth + self.params.word_embed_size, 2, F.relu)
         self.bi = True
-        self.rnn = nn.LSTM(input_size=self.params.word_embed_size + self.params.sum_depth,
-                           hidden_size=self.params.encoder_rnn_size,
-                           num_layers=self.params.encoder_num_layers,
-                           batch_first=True,
-                           bidirectional=self.bi)
+        self.rnn = nn.LSTM(
+            input_size=self.params.word_embed_size + self.params.sum_depth,
+            hidden_size=self.params.encoder_rnn_size,
+            num_layers=self.params.encoder_num_layers,
+            batch_first=True,
+            bidirectional=self.bi,
+        )
 
     def forward(self, input, State):
         """
         :param input: [batch_size, seq_len, embed_size] tensor
         :return: context of input sentenses with shape of [batch_size, latent_variable_size]
         """
-
-        # print "Three"
         [batch_size, seq_len, embed_size] = input.size()
         # input shape   32    ,    26     ,    825
 
@@ -40,11 +41,12 @@ class Encoder(nn.Module):
         input = input.view(batch_size, seq_len, embed_size)
         # input shape 32    ,    26     ,    825
 
-        assert parameters_allocation_check(self), \
-            'Invalid CUDA options. Parameters should be allocated in the same memory'
+        assert parameters_allocation_check(
+            self
+        ), "Invalid CUDA options. Parameters should be allocated in the same memory"
 
-        ''' Unfold rnn with zero initial state and get its final state from the last layer
-        '''
+        """ Unfold rnn with zero initial state and get its final state from the last layer
+        """
         encoder_outputs, (h_0, final_state) = self.rnn(input, State)
         """Inputs: input, (h_0, c_0)
         - **input** of shape `(seq_len, batch, input_size)`: tensor containing the features
@@ -81,18 +83,18 @@ class EncoderHR(nn.Module):
 
         self.hw1 = Highway(self.params.sum_depth + self.params.word_embed_size, 2, F.relu)
         self.bi = True
-        self.rnn = nn.LSTM(input_size=self.params.word_embed_size + self.params.sum_depth,
-                           hidden_size=self.params.encoder_rnn_size,
-                           num_layers=self.params.encoder_num_layers,
-                           batch_first=True,
-                           bidirectional=self.bi)
+        self.rnn = nn.LSTM(
+            input_size=self.params.word_embed_size + self.params.sum_depth,
+            hidden_size=self.params.encoder_rnn_size,
+            num_layers=self.params.encoder_num_layers,
+            batch_first=True,
+            bidirectional=self.bi,
+        )
 
-        self.layer_dim = (self.params.encoder_num_layers*2)*self.params.encoder_rnn_size
+        self.layer_dim = (self.params.encoder_num_layers * 2) * self.params.encoder_rnn_size
 
-        self.linear_mu = nn.Linear(self.layer_dim*2, self.layer_dim*2)
-        self.linear_var = nn.Linear(self.layer_dim*2, self.layer_dim*2)
-
-    
+        self.linear_mu = nn.Linear(self.layer_dim * 2, self.layer_dim * 2)
+        self.linear_var = nn.Linear(self.layer_dim * 2, self.layer_dim * 2)
 
     def forward(self, input, State):
         """
@@ -113,15 +115,16 @@ class EncoderHR(nn.Module):
         input = input.view(batch_size, seq_len, embed_size)
         # input shape 32    ,    26     ,    825
 
-        assert parameters_allocation_check(self), \
-            'Invalid CUDA options. Parameters should be allocated in the same memory'
+        assert parameters_allocation_check(
+            self
+        ), "Invalid CUDA options. Parameters should be allocated in the same memory"
 
-        ''' Unfold rnn with zero initial state and get its final state from the last layer
-        '''
+        """ Unfold rnn with zero initial state and get its final state from the last layer
+        """
 
         context_ = []
         for word_id in range(seq_len):
-            encoder_outputs, (h_0, final_state) = self.rnn(input[:,word_id].unsqueeze(1), State)
+            encoder_outputs, (h_0, final_state) = self.rnn(input[:, word_id].unsqueeze(1), State)
             """Inputs: input, (h_0, c_0)
             - **input** of shape `(seq_len, batch, input_size)`: tensor containing the features
             of the input sequence.
@@ -135,7 +138,7 @@ class EncoderHR(nn.Module):
             State = (h_0, final_state)
 
             c_0 = final_state
-            
+
             final_state = final_state.view(self.params.encoder_num_layers, 2, batch_size, self.params.encoder_rnn_size)
             final_state = final_state[-1]
             h_1, h_2 = final_state[0], final_state[1]

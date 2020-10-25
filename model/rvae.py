@@ -2,26 +2,34 @@ import numpy as np
 import torch as t
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
+
 from beam_search import Beam
 from selfModules.embedding import Embedding
-from torch.autograd import Variable
 from utils.functional import fold, parameters_allocation_check
 
-from .decoder import Decoder, DecoderResidual, DecoderAttention, DecoderResidualAttention
+from .decoder import Decoder, DecoderAttention, DecoderResidual, DecoderResidualAttention
 from .encoder import Encoder, EncoderHR
 
 
 class RVAE(nn.Module):
-    def __init__(self, params, params_2, path):
+    def __init__(self, params: object, params_2: object, path:str) -> None:
+        """
+        [summary] initializes the RVAE  with the correct parameters and data files
+
+        Args:
+            params (object): [description] parameters for original encoder
+            params_2 (object): [description] parameters for paraphrase encoder
+            path (str): [description] a path to the data files
+        """
         super(RVAE, self).__init__()
 
         self.params = params
-        self.params_2 = params_2  # Encoder-2 parameters
+        self.params_2 = params_2 
 
         self.embedding = Embedding(self.params, path)
         self.embedding_2 = Embedding(self.params_2, path, True)
 
-        
         self.encoder_original = Encoder(self.params)
         if self.params.hrvae: 
             self.encoder_paraphrase = EncoderHR(self.params_2)
@@ -40,13 +48,11 @@ class RVAE(nn.Module):
         else:
             self.decoder = Decoder(self.params_2)
 
-    def forward(self, unk_idx, drop_prob,
-                encoder_word_input=None, encoder_character_input=None,
-                encoder_word_input_2=None, encoder_character_input_2=None,
-                decoder_word_input_2=None, decoder_character_input_2=None,
-                z=None, initial_state=None):
-
-        # Modified the parameters of forward function according to Encoder-2
+    def forward(self, unk_idx: int, drop_prob: float,
+                encoder_word_input: object=None, encoder_character_input: object=None,
+                encoder_word_input_2: object=None, encoder_character_input_2: object=None,
+                decoder_word_input_2: object=None, decoder_character_input_2: object=None,
+                z: object=None, initial_state: tuple=None) -> tuple:
         """
         :param encoder_word_input: An tensor with shape of [batch_size, seq_len] of Long type
         :param encoder_character_input: An tensor with shape of [batch_size, seq_len, max_word_len] of Long type
@@ -73,28 +79,19 @@ class RVAE(nn.Module):
             "Invalid input. If z is None then encoder and decoder inputs should be passed as arguments"
 
         if z is None:
-            ''' Get context from encoder and sample z ~ N(mu, std)
-            '''  # 把word和character拼接成一个向量
+            ''' Get context from encoder and sample z ~ N(mu, std) '''  
             [batch_size, _] = encoder_word_input.size()
-
             encoder_input = self.embedding(encoder_word_input, encoder_character_input, unk_idx, drop_prob)
 
-            ''' ===================================================Doing the same for encoder-2===================================================
-            '''
+            ''' ===================================================Doing the same for encoder-2=================================================== '''
             [batch_size_2, _] = encoder_word_input_2.size()
-
             encoder_input_2 = self.embedding_2(encoder_word_input_2, encoder_character_input_2, unk_idx, drop_prob)
             
-
-            ''' ==================================================================================================================================
-            '''
-
+            ''' ================================================================================================================================== '''
             enc_out_original, context, h_0, c_0, _ = self.encoder_original(encoder_input, None)
-            state_original = (h_0, c_0)  # Final state of Encoder-1 原始句子编码
-            # state_original = context
-            enc_out_paraphrase, context_2, h_0, c_0, context_ = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  接下去跟释义句编码
-            state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 原始句子编码
-            # state_paraphrase = context_2
+            state_original = (h_0, c_0)  # Final state of Encoder-1 
+            enc_out_paraphrase, context_2, h_0, c_0, context_ = self.encoder_paraphrase(encoder_input_2, state_original)  # Encoder_2 for Ques_2  
+            state_paraphrase = (h_0, c_0)  # Final state of Encoder-2 
 
             if context_ is not None:
 
@@ -138,79 +135,55 @@ class RVAE(nn.Module):
             std = None
 
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
-        out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)           # Take a look at the decoder
+        out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)
 
         return out, final_state, kld, mu, std
 
-    def learnable_parameters(self):
-        # wordembedding是固定值，因此必须从优化器的参数列表里移除。
-        # word_embedding is constant parameter thus it must be dropped from list of parameters for optimizer
+    def learnable_parameters(self) -> list:
+        """ creates a gradients for each parameter in the class to be optimized """
         return [p for p in self.parameters() if p.requires_grad]
 
-    def trainer(self, optimizer, batch_loader, batch_loader_2):
-        def train(coef, batch_size, use_cuda, dropout, start_index):
+    def trainer(self, optimizer: object, batch_loader: object, batch_loader_2: object) -> objet:
+        def train(coef: float, batch_size: int, use_cuda: bool, dropout: float, start_index: int) -> tuple:
+            """ train the encoder/decoder step by step via train() """
             input = batch_loader.next_batch(batch_size, 'train', start_index)
             input = [Variable(t.from_numpy(var)) for var in input]
             input = [var.long() for var in input]
             input = [var.cuda() if use_cuda else var for var in input]
-            # 这里是data/train.txt,转换变成embedding，用pand补齐，
-            # 其中encoder_word_input, encoder_character_input是将 xo原始句输入倒过来前面加若干占位符，
-            # decoder_word_input, decoder_character_input是 xo原始句加了开始符号末端补齐
-            # target，结束句子后面加了结束符，target是xo原始句加结束符后面加若干占位符
+            
             [encoder_word_input, encoder_character_input, decoder_word_input, decoder_character_input, target, _] = input
 
-            ''' =================================================== Input for Encoder-2 ========================================================
-            '''
-
+            ''' =================================================== Input for Encoder-2 ========================================================'''
             input_2 = batch_loader_2.next_batch(batch_size, 'train', start_index)
             input_2 = [Variable(t.from_numpy(var)) for var in input_2]
             input_2 = [var.long() for var in input_2]
             input_2 = [var.cuda() if use_cuda else var for var in input_2]
-            # 这里是data/super/train.txt,转换变成embedding，用pand补齐，
-            # 其中encoder_word_input, encoder_character_input是将 释义句xp输入倒过来前面加若干占位符，
-            # decoder_word_input, decoder_character_input是 释义句xp加了开始符号末端补齐
-            # target，结束句子后面加了结束符，target是释义句xp加结束符后面加若干占位符
             [encoder_word_input_2, encoder_character_input_2, decoder_word_input_2, decoder_character_input_2, target, _] = input_2
             unk_idx = None
 
-            ''' ================================================================================================================================
-            '''
-            # exit()
-            # 这里encoder-input是原始句子xo的输入（句子翻转），encoder-input2是释义句xp的输入（句子翻转），decoder-input是释义句加加开始符号
+            ''' ================================================================================================================================ '''
             logits, _, kld, _, _ = self(unk_idx, dropout,
                                         encoder_word_input, encoder_character_input,
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,
                                         z=None)
-            # https://github.com/ruotianluo/NeuralDialog-CVAE-pytorch/blob/master/models/cvae.py
-            # https://arxiv.org/pdf/1703.10960.pdf
-            # labels = self.output_tokens[:, 1:]
-            # label_mask = torch.sign(labels).detach().float()
-            # bow_logits = self.bow_project(logits)
-            # bow_loss = -F.log_softmax(bow_logits, dim=1).gather(1, labels) * label_mask
-            # bow_loss = torch.sum(bow_loss, 1)
-            # bow_loss  = torch.mean(bow_loss)
-
-            # logits = logits.view(-1, self.params.word_vocab_size)
             
             logits = logits.view(-1, self.params_2.word_vocab_size)
-            print([batch_loader_2.decode_word(x[k]) for x in logits])
             target = target.view(-1)
-            # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
 
-            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 79 * cross_entropy + coef * kld  # 79 as arbitrary loss weight
 
-            optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
-            loss.backward()  # 然后反向传递
-            optimizer.step()  # 反向跟新梯度
+            optimizer.zero_grad()  
+            loss.backward()  
+            optimizer.step()  
 
-            return cross_entropy, kld, coef # 交叉熵，kl-devergence，kld-coef是为了让他
-
+            return cross_entropy, kld, coef 
         return train
 
     def validater(self, batch_loader, batch_loader_2):
         def validate(batch_size, use_cuda, start_index):
+            """ validate the encoder/decoder step by step via validate() """
             input = batch_loader.next_batch(batch_size, 'valid', start_index)
             input = [Variable(t.from_numpy(var)) for var in input]
             input = [var.long() for var in input]
@@ -245,8 +218,8 @@ class RVAE(nn.Module):
 
         return validate
 
-    def sample(self, batch_loader, seq_len, seed, use_cuda, State):
-        # seed = Variable(t.from_numpy(seed).float())
+    def sample(self, batch_loader: object, seq_len: int, seed: int, use_cuda: bool, State: object) -> tuple:
+        """ unroll the decoder step by step to obtain a sample, based on the input encoded original and a random seed """        
         if use_cuda:
             seed = seed.cuda()
 
@@ -267,21 +240,8 @@ class RVAE(nn.Module):
                                                   None, None,
                                                   decoder_word_input, decoder_character_input,
                                                   seed, initial_state)
-
-            # forward(self, drop_prob,
-            #           encoder_word_input=None, encoder_character_input=None,
-            #           encoder_word_input_2=None, encoder_character_input_2=None,
-            #           decoder_word_input_2=None, decoder_character_input_2=None,
-            #           z=None, initial_state=None):
-
-            # logits = logits.view(-1, self.params.word_vocab_size)
-            # logits = logits.view(-1, self.params.word_vocab_size)
+            
             logits = logits.view(-1, self.params_2.word_vocab_size)
-            # print '---------------------------------------'
-            # print 'Printing logits'
-            # print logits
-            # print '------------------------------------------'
-
             prediction = F.softmax(logits)
 
             word = batch_loader.sample_word_from_distribution(prediction.data.cpu().numpy()[-1])
@@ -303,6 +263,7 @@ class RVAE(nn.Module):
         return result
 
     def sampler(self, batch_loader, batch_loader_2, seq_len, seed, use_cuda, i, beam_size, n_best):
+        """ sample using a encoded sentence and a beam search over the states of the decoder """
         input = batch_loader.next_batch(1, 'valid', i)
         input = [Variable(t.from_numpy(var)) for var in input]
         input = [var.long() for var in input]
@@ -314,18 +275,12 @@ class RVAE(nn.Module):
         encoder_output, _, h0, c0, _ = self.encoder_original(encoder_input, None)
         State = (h0, c0)
         
-        # print '----------------------'
-        # print 'Printing h0 ---------->'
-        # print h0
-        # print '----------------------'
-
-        # State = None
         results, scores = self.sample_beam(batch_loader_2, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output)
 
         return results, scores
 
     def sample_beam(self, batch_loader, seq_len, seed, use_cuda, State, beam_size, n_best, encoder_output):
-        # seed = Variable(t.from_numpy(seed).float())
+        """ sample and beam search for unrolling every step of the decoder based on a encoded original input sentence """
         if use_cuda:
             seed = seed.cuda()
 
@@ -338,27 +293,11 @@ class RVAE(nn.Module):
             decoder_word_input, decoder_character_input = decoder_word_input.cuda(), decoder_character_input.cuda()
 
         dec_states = State
-
-        # print '========= Before ================'
-        # print "dec_states:", dec_states[0].size()
-        # print "dec_states:", dec_states[1].size()
-        # print '=================================='
-
-        # dec_states = [
-        #     Variable(dec_states[0].repeat(1, beam_size, 1)),
-        #     Variable(dec_states[1].repeat(1, beam_size, 1))
-        # ]
         
         dec_states = [
             dec_states[0].repeat(1, beam_size, 1),
             dec_states[1].repeat(1, beam_size, 1)
         ]
-        
-        # print'========== After =================='
-        # print "dec_states:", dec_states[0].size()
-        # print "dec_states:", dec_states[1].size()
-        # print '=================================='
-        # exit()
 
         drop_prob = 0.0
         beam_size = beam_size
@@ -375,35 +314,9 @@ class RVAE(nn.Module):
             ).t().contiguous().view(1, -1)
 
             trg_emb = self.embedding_2.word_embed(Variable(input).transpose(1, 0))
-
-            # print trg_emb.size()
-            # print seed.size()
-            
-
             trg_h, dec_states = self.decoder.only_decoder_beam(trg_emb, seed, drop_prob, encoder_output, dec_states)
 
-            # trg_h, (trg_h_t, trg_c_t) = self.model.decoder(trg_emb, (dec_states[0].squeeze(0), dec_states[1].squeeze(0)), context )
-
-            # print trg_h.size()
-            # print trg_h_t.size()
-            # print trg_c_t.size()
-
-            # dec_states = (trg_h_t, trg_c_t)
-
-            # print 'State dimension ----------->'
-            # print State[0].size()
-            # print State[1].size()
-            # print '======================================='
-            # print "dec_states:", dec_states[0].size()
-            # print "dec_states:", dec_states[1].size()
-            # print '========== Things successful ==========='
-
-            # exit()
-
             dec_out = trg_h.squeeze(1)
-
-            # print "dec_out:", dec_out.size()
-
             out = F.softmax(self.decoder.fc(dec_out)).unsqueeze(0)
 
             word_lk = out.view(
@@ -459,22 +372,14 @@ class RVAE(nn.Module):
                 update_active(dec_states[1])
             )
             dec_out = update_active(dec_out)
-            # context = update_active(context)
-
             remaining_sents = len(active)
-
-        # (4) package everything up
 
         allHyp, allScores = [], []
 
         for b in range(batch_size):
             scores, ks = beam[b].sort_best()
-            # print scores
-            # print ks
             allScores += [scores[:n_best]]
             hyps = zip(*[beam[b].get_hyp(k) for k in ks[:n_best]])
-            # print hyps
-            # print "------------------"
             allHyp += [hyps]
 
         # print '==== Complete ========='
