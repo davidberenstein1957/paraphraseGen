@@ -19,8 +19,8 @@ from utils.parameters import Parameters
 if __name__ == "__main__":
     path = "paraphraseGen/"
     save_path = "/content/drive/My Drive/thesis/"
-    if not os.path.exists(path + "data/word_embeddings.npy"):
-        raise FileNotFoundError("word embeddings file was't found")
+    # if not os.path.exists(path + "data/word_embeddings.npy"):
+    #     raise FileNotFoundError("word embeddings file was't found")
     # 一次一句，这样容易看，一次两个词
     parser = argparse.ArgumentParser(description="RVAE")
     parser.add_argument("--num-iterations", type=int, default=120000)
@@ -34,9 +34,9 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
-    data_name = "quora"  # quora, coco, both
+    data_name = "coco"  # quora, coco, both
     parser.add_argument("--data_name", type=str, default=data_name)  # quora, coco, both
-    embeddings_name = "both"  # quora, coco, both
+    embeddings_name = "coco"  # quora, coco, both
     parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, coco, both
 
     parser.add_argument("--use-file", type=bool, default=True)
