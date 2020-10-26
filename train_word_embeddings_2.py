@@ -22,7 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("--data-name", type=str, default="both", metavar="CUDA", help="use cuda (default: False)")
     args = parser.parse_args()
 
-    data_name = data_name = args.data_name  # quora, mscoco, both
+    data_name = args.data_name  # quora, mscoco, both
 
     path = "paraphraseGen/"
 
