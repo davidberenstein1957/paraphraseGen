@@ -6,7 +6,7 @@ from random import randint
 import numpy as np
 import torch as t
 from torch.autograd import Variable
-from torch.optim import Adam
+from torch.optim import Adam, SGD
 
 from model.rvae_previous import RVAE
 from utils.batch_loader import BatchLoader
@@ -34,9 +34,9 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
-    data_name = "coco"  # quora, coco, both
+    data_name = "quora"  # quora, coco, both
     parser.add_argument("--data_name", type=str, default=data_name)  # quora, coco, both
-    embeddings_name = "coco"  # quora, coco, both
+    embeddings_name = "quora"  # quora, coco, both
     parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, coco, both
 
     parser.add_argument("--use-file", type=bool, default=True)
