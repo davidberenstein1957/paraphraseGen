@@ -24,9 +24,9 @@ class Embedding(nn.Module):
         self.params = params
 
         if flag == True:
-            word_embed = np.load(path + f"data/super/word_embeddings_{params['attn_model']}.npy")
+            word_embed = np.load(path + f"data/super/word_embeddings_{self.params.attn_model}.npy")
         else:
-            word_embed = np.load(path + f"data/word_embeddings_{params['attn_model']}.npy")
+            word_embed = np.load(path + f"data/word_embeddings_{self.params.attn_model}.npy")
 
         self.word_embed = nn.Embedding(self.params.word_vocab_size, self.params.word_embed_size)
         self.char_embed = nn.Embedding(self.params.char_vocab_size, self.params.char_embed_size)

@@ -34,10 +34,10 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
-    data_name = "quora"  # quora, mscoco, both
-    parser.add_argument("--data_name", type=str, default=data_name)  # quora, mscoco, both
-    embeddings_name = "quora"  # quora, mscoco, both
-    parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, mscoco, both
+    data_name = "quora"  # quora, coco, both
+    parser.add_argument("--data_name", type=str, default=data_name)  # quora, coco, both
+    embeddings_name = "both"  # quora, coco, both
+    parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, coco, both
 
     parser.add_argument("--use-file", type=bool, default=True)
     parser.add_argument("--test-file", type=str, default=path + f"/data/test_{data_name}.txt")

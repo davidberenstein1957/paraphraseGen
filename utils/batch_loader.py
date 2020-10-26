@@ -81,8 +81,8 @@ class BatchLoader:
 
         self.blind_symbol = ""
         self.pad_token = "_"
-        self.go_token = "<s>"
-        self.end_token = "</s>"
+        self.go_token = "<"
+        self.end_token = ">"
 
         idx_exists = fold(f_and, [os.path.exists(file) for file in self.idx_files], True)
 
@@ -239,7 +239,7 @@ class BatchLoader:
             to_add = max_input_seq_len - line_len
             decoder_word_input[i] = line + [self.word_to_idx[self.pad_token]] * to_add
 
-        for i, line in enumerate(decoder_character_input):  #
+        for i, line in enumerate(decoder_character_input):  
             line_len = input_seq_len[i]
             to_add = max_input_seq_len - line_len
             decoder_character_input[i] = line + [self.encode_characters(self.pad_token)] * to_add

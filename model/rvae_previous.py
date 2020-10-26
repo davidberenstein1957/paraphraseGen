@@ -36,11 +36,7 @@ class RVAE(nn.Module):
         self.context_to_mu = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
         self.context_to_logvar = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
 
-        if self.params.attn_model and self.params.res_model:
-            self.decoder = DecoderResidualAttention(self.params_2)
-        elif self.params.attn_model:
-            self.decoder = DecoderAttention(self.params_2)
-        elif self.params.res_model:
+        if self.params.res_model:
             self.decoder = DecoderResidual(self.params_2)
         else:
             self.decoder = Decoder(self.params_2)
