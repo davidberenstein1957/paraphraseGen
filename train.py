@@ -35,14 +35,12 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
-    data_name = "quora"  # quora, coco, both
-    parser.add_argument("--data_name", type=str, default=data_name)  # quora, coco, both
-    embeddings_name = "quora"  # quora, coco, both
-    parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, coco, both
+    parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
+    parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
 
     parser.add_argument("--use-file", type=bool, default=True)
-    parser.add_argument("--test-file", type=str, default=path + f"/data/test_{data_name}.txt")
-    parser.add_argument("--train-file", type=str, default=path + f"/data/train_{data_name}.txt")
+    parser.add_argument("--test-file", type=str, default=path + f"/data/test_{parser.parse_args().data_name}.txt")
+    parser.add_argument("--train-file", type=str, default=path + f"/data/train_{parser.parse_args().data_name}.txt")
 
     parser.add_argument("--num-sample", type=int, default=5)
     parser.add_argument("--beam-top", type=int, default=1)
@@ -53,9 +51,10 @@ if __name__ == "__main__":
     parser.add_argument("--model-result", default="")
 
     args = parser.parse_args()
+
     if args.res_model:
         save_path = os.path.join(save_path, 'stacked')
-    elif embeddings_name == 'both':
+    elif args.embeddings_name == 'both':
         save_path = os.path.join(save_path, 'word2vec')
     elif args.hrvae:
         save_path = os.path.join(save_path, 'hrvae')
@@ -75,21 +74,21 @@ if __name__ == "__main__":
 
     """ =================== Creating batch_loader for encoder-1 =========================================
     """
-    data_files = [path + f"data/train_{data_name}.txt", path + f"data/test_{data_name}.txt"]
+    data_files = [path + f"data/train_{args.data_name}.txt", path + f"data/test_{args.data_name}.txt"]
 
     idx_files = [
-        path + f"data/words_vocab_{embeddings_name}.pkl",
-        path + f"data/characters_vocab_{embeddings_name}.pkl",
+        path + f"data/words_vocab_{args.embeddings_name}.pkl",
+        path + f"data/characters_vocab_{args.embeddings_name}.pkl",
     ]
 
     tensor_files = [
         [
-            path + f"data/train_word_tensor_{embeddings_name}.npy",
-            path + f"data/valid_word_tensor_{embeddings_name}.npy",
+            path + f"data/train_word_tensor_{args.embeddings_name}.npy",
+            path + f"data/valid_word_tensor_{args.embeddings_name}.npy",
         ],
         [
-            path + f"data/train_character_tensor_{embeddings_name}.npy",
-            path + f"data/valid_character_tensor_{embeddings_name}.npy",
+            path + f"data/train_character_tensor_{args.embeddings_name}.npy",
+            path + f"data/valid_character_tensor_{args.embeddings_name}.npy",
         ],
     ]
 
@@ -99,28 +98,28 @@ if __name__ == "__main__":
         batch_loader.max_seq_len,
         batch_loader.words_vocab_size,
         batch_loader.chars_vocab_size,
-        embeddings_name,
+        args.embeddings_name,
         args.res_model,
         args.hrvae,
     )
 
     """ =================== Doing the same for encoder-2 ===============================================
     """
-    data_files = [path + f"data/super/train_{data_name}_2.txt", path + f"data/super/test_{data_name}_2.txt"]
+    data_files = [path + f"data/super/train_{args.data_name}_2.txt", path + f"data/super/test_{args.data_name}_2.txt"]
 
     idx_files = [
-        path + f"data/super/words_vocab_{embeddings_name}_2.pkl",
-        path + f"data/super/characters_vocab_{embeddings_name}_2.pkl",
+        path + f"data/super/words_vocab_{args.embeddings_name}_2.pkl",
+        path + f"data/super/characters_vocab_{args.embeddings_name}_2.pkl",
     ]
 
     tensor_files = [
         [
-            path + f"data/super/train_word_tensor_{embeddings_name}_2.npy",
-            path + f"data/super/valid_word_tensor_{embeddings_name}_2.npy",
+            path + f"data/super/train_word_tensor_{args.embeddings_name}_2.npy",
+            path + f"data/super/valid_word_tensor_{args.embeddings_name}_2.npy",
         ],
         [
-            path + f"data/super/train_character_tensor_{embeddings_name}_2.npy",
-            path + f"data/super/valid_character_tensor_{embeddings_name}_2.npy",
+            path + f"data/super/train_character_tensor_{args.embeddings_name}_2.npy",
+            path + f"data/super/valid_character_tensor_{args.embeddings_name}_2.npy",
         ],
     ]
     batch_loader_2 = BatchLoader(data_files, idx_files, tensor_files, path)
@@ -129,7 +128,7 @@ if __name__ == "__main__":
         batch_loader_2.max_seq_len,
         batch_loader_2.words_vocab_size,
         batch_loader_2.chars_vocab_size,
-        embeddings_name,
+        args.embeddings_name,
         args.res_model,
         args.hrvae,
     )
@@ -244,7 +243,7 @@ if __name__ == "__main__":
 
             ce_result.append(cross_entropy.data.cpu().numpy())
             kld_result.append(kld.data.cpu().numpy() * coef)
-
-    t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration+1}")
+    iteration += 1
+    t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration}")
     np.save(save_path + f"ce_result.npy".format(args.ce_result), np.array(ce_result))
     np.save(save_path + f"kld_result_npy".format(args.kld_result), np.array(kld_result))
