@@ -18,7 +18,7 @@ from utils.parameters import Parameters
 
 if __name__ == "__main__":
     path = "paraphraseGen/"
-    save_path = "/content/drive/My Drive/thesis/"
+    save_path = "/content/drive/My Drive/thesis/results"
     # if not os.path.exists(path + "data/word_embeddings.npy"):
     #     raise FileNotFoundError("word embeddings file was't found")
     # 一次一句，这样容易看，一次两个词
@@ -29,6 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning-rate", type=float, default=0.00005)
     parser.add_argument("--dropout", type=float, default=0.3)
 
+    parser.add_argument("--adam", type=bool, default=False)
     parser.add_argument("--hrvae", type=bool, default=False)
     parser.add_argument("--annealing", type=str, default="mono")  # none, mono, cyc
     parser.add_argument("--use-trained", type=bool, default=False)
@@ -52,6 +53,25 @@ if __name__ == "__main__":
     parser.add_argument("--model-result", default="")
 
     args = parser.parse_args()
+    if args.res_model:
+        save_path = os.path.join(save_path, 'stacked')
+    elif embeddings_name == 'both':
+        save_path = os.path.join(save_path, 'word2vec')
+    elif args.hrvae:
+        save_path = os.path.join(save_path, 'hrvae')
+    elif args.annealing:
+        save_path = os.path.join(save_path, 'cyclical')
+    elif args.annealing:
+        save_path = os.path.join(save_path, 'adam')
+    else:
+        save_path = os.path.join(save_path, 'base')
+
+    if args.data_name == 'quora':
+        save_path = os.path.join(save_path, 'quora')
+    elif args.data_name == 'coco':
+        save_path = os.path.join(save_path, 'coco')
+    else:
+        save_path = os.path.join(save_path, 'both')
 
     """ =================== Creating batch_loader for encoder-1 =========================================
     """
@@ -129,7 +149,10 @@ if __name__ == "__main__":
     if args.use_cuda:
         rvae = rvae.cuda()
 
-    optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
+    if args.adam:
+        optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
+    else:
+        optimizer = SGD(rvae.learnable_parameters(), args.learning_rate)
 
     train_step = rvae.trainer(optimizer, batch_loader, batch_loader_2)  # batchloader里面是原始句子，batechloader2里面存储的是释义句
     validate = rvae.validater(batch_loader, batch_loader_2)
@@ -222,6 +245,6 @@ if __name__ == "__main__":
             ce_result.append(cross_entropy.data.cpu().numpy())
             kld_result.append(kld.data.cpu().numpy() * coef)
 
-    t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration}")
+    t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration+1}")
     np.save(save_path + f"ce_result.npy".format(args.ce_result), np.array(ce_result))
     np.save(save_path + f"kld_result_npy".format(args.kld_result), np.array(kld_result))
