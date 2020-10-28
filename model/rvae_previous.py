@@ -125,11 +125,11 @@ class RVAE(nn.Module):
                 logvar = self.context_to_logvar(context_2)
                 std = t.exp(0.5 * logvar)
 
-                z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                z_sampled = Variable(t.randn([batch_size, self.params.latent_variable_size]))
                 if use_cuda:
-                    z = z.cuda()
+                    z_sampled = z_sampled.cuda()
 
-                z = z * std + mu
+                z = z_sampled * std + mu
 
                 kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
@@ -138,19 +138,20 @@ class RVAE(nn.Module):
             mu = None
             std = None
 
+        # z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
+        wasserstein_loss = self.imq_kernel(z_sampled, z, self.params.latent_variable_size)
+
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original) 
-        z_sampled = sample_gaussian()      # Take a look at the decoder
-        z_tilda = sample_z_tilda_from_posterior(logvar, mu)
-        wasserstein_loss = self.mmd_penalty(z_sampled, z_tilda)
-        kld = 0.01 * kld + 3* wasserstein_loss
+        
+        kld = 0.01 * kld + 3 * wasserstein_loss
         
         return out, final_state, kld, mu, std
 
     def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=1):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
-        epsilon = Variable(t.randn(z_log_sigma.size()))
+        epsilon = Variable(t.randn(z_log_sigma.size())).cuda()
         
         return z_mean.add(t.mul(z_temperature, epsilon * t.exp(z_log_sigma)))  # N(mu, I * sigma**2)
     
@@ -158,51 +159,39 @@ class RVAE(nn.Module):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
         return Variable(t.randn([32, self.params.latent_variable_size])) # Dimension [batch_size x latent_dim]
     
-    def mmd_penalty(self, sample_qz, sample_pz):
-        n = 32
-        n = n
-        nf = n*1.0
-        half_size = (n * n - n) / 2
+    def imq_kernel(self, X: t.Tensor,
+               Y: t.Tensor,
+               h_dim: int):
+        batch_size = X.size(0)
 
-        norms_pz = t.sum(tf.square(sample_pz), axis=1, keep_dims=True)
-        dotprods_pz = tf.matmul(sample_pz, sample_pz, transpose_b=True)
-        distances_pz = norms_pz + tf.transpose(norms_pz) - 2. * dotprods_pz
+        norms_x = X.pow(2).sum(1, keepdim=True)  # batch_size x 1
+        prods_x = t.mm(X, X.t())  # batch_size x batch_size
+        dists_x = norms_x + norms_x.t() - 2 * prods_x
 
-        norms_qz = t.sum(tf.square(sample_qz), axis=1, keep_dims=True)
-        dotprods_qz = tf.matmul(sample_qz, sample_qz, transpose_b=True)
-        distances_qz = norms_qz + tf.transpose(norms_qz) - 2. * dotprods_qz
+        norms_y = Y.pow(2).sum(1, keepdim=True)  # batch_size x 1
+        prods_y = t.mm(Y, Y.t())  # batch_size x batch_size
+        dists_y = norms_y + norms_y.t() - 2 * prods_y
 
-        dotprods = tf.matmul(sample_qz, sample_pz, transpose_b=True)
-        distances = norms_qz + tf.transpose(norms_pz) - 2. * dotprods
+        dot_prd = t.mm(X, Y.t())
+        dists_c = norms_x + norms_y.t() - 2 * dot_prd
 
-        # if self.config['kernel'] == 'RBF':
-            # Median heuristic for the sigma^2 of Gaussian kernel
-        sigma2_k = t.topk(
-            t.reshape(distances, [-1]), half_size).values[half_size - 1]
-        sigma2_k += t.topk(
-            t.reshape(distances_qz, [-1]), half_size).values[half_size - 1]
-        # if opts['verbose']:
-        #     sigma2_k = tf.Print(sigma2_k, [sigma2_k], 'Kernel width:')
-        res1 = t.exp(- distances_qz / 2. / sigma2_k)
-        res1 += t.exp(- distances_pz / 2. / sigma2_k)
-        res1 = t.matmul(res1, 1. - t.eye(n))
-        res1 = t.sum(res1) / (nf * nf - nf)
-        res2 = t.exp(- distances / 2. / sigma2_k)
-        res2 = t.sum(res2) * 2. / (nf * nf)
-        stat = res1 - res2
-        # elif self.config['kernel'] == 'IMQ':
-        #     Cbase = 2. * self.config['latent_dim'] * 2. * 1. # sigma2_p # for normal sigma2_p = 1
-        #     stat = 0.
-        #     for scale in [.1, .2, .5, 1., 2., 5., 10.]:
-        #         C = Cbase * scale
-        #         res1 = C / (C + distances_qz)
-        #         res1 += C / (C + distances_pz)
-        #         res1 = tf.multiply(res1, 1. - tf.eye(n))
-        #         res1 = tf.reduce_sum(res1) / (nf * nf - nf)
-        #         res2 = C / (C + distances)
-        #         res2 = tf.reduce_sum(res2) * 2. / (nf * nf)
-        #         stat += res1 - res2
-        return stat
+        stats = 0
+        for scale in [.1, .2, .5, 1., 2., 5., 10.]:
+            C = 2 * h_dim * 1.0 * scale
+            res1 = C / (C + dists_x)
+            res1 += C / (C + dists_y)
+
+            if t.cuda.is_available():
+                res1 = (1 - t.eye(batch_size).cuda()) * res1
+            else:
+                res1 = (1 - t.eye(batch_size)) * res1
+
+            res1 = res1.sum() / (batch_size - 1)
+            res2 = C / (C + dists_c)
+            res2 = res2.sum() * 2. / (batch_size)
+            stats += res1 - res2
+
+        return stats
     
     def learnable_parameters(self):
         # wordembedding是固定值，因此必须从优化器的参数列表里移除。
@@ -280,7 +269,7 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 79 * cross_entropy + 50 * (1-sim_score) + coef * kld  # 79应该是作者拍脑袋的
+            loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
