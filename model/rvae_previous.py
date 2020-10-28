@@ -106,7 +106,7 @@ class RVAE(nn.Module):
                     logvar_.append(self.context_to_logvar(entry))
                 
                 std = t.exp(0.5 * logvar_[-1])
-
+                
                 z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
                 if use_cuda:
                     z = z.cuda()
@@ -140,10 +140,70 @@ class RVAE(nn.Module):
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
-        out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original)           # Take a look at the decoder
-
+        out, final_state = self.decoder(decoder_input_2, z, drop_prob, enc_out_paraphrase, state_original) 
+        z_sampled = sample_gaussian()      # Take a look at the decoder
+        z_tilda = sample_z_tilda_from_posterior(logvar, mu)
+        wasserstein_loss = self.mmd_penalty(z_sampled, z_tilda)
+        kld = 0.01 * kld + 3* wasserstein_loss
+        
         return out, final_state, kld, mu, std
 
+    def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=1):
+        """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
+        epsilon = Variable(t.randn(z_log_sigma.size()))
+        
+        return z_mean.add(t.mul(z_temperature, epsilon * t.exp(z_log_sigma)))  # N(mu, I * sigma**2)
+    
+    def sample_gaussian(self):
+        """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
+        return Variable(t.randn([32, self.params.latent_variable_size])) # Dimension [batch_size x latent_dim]
+    
+    def mmd_penalty(self, sample_qz, sample_pz):
+        n = 32
+        n = n
+        nf = n*1.0
+        half_size = (n * n - n) / 2
+
+        norms_pz = t.sum(tf.square(sample_pz), axis=1, keep_dims=True)
+        dotprods_pz = tf.matmul(sample_pz, sample_pz, transpose_b=True)
+        distances_pz = norms_pz + tf.transpose(norms_pz) - 2. * dotprods_pz
+
+        norms_qz = t.sum(tf.square(sample_qz), axis=1, keep_dims=True)
+        dotprods_qz = tf.matmul(sample_qz, sample_qz, transpose_b=True)
+        distances_qz = norms_qz + tf.transpose(norms_qz) - 2. * dotprods_qz
+
+        dotprods = tf.matmul(sample_qz, sample_pz, transpose_b=True)
+        distances = norms_qz + tf.transpose(norms_pz) - 2. * dotprods
+
+        # if self.config['kernel'] == 'RBF':
+            # Median heuristic for the sigma^2 of Gaussian kernel
+        sigma2_k = t.topk(
+            t.reshape(distances, [-1]), half_size).values[half_size - 1]
+        sigma2_k += t.topk(
+            t.reshape(distances_qz, [-1]), half_size).values[half_size - 1]
+        # if opts['verbose']:
+        #     sigma2_k = tf.Print(sigma2_k, [sigma2_k], 'Kernel width:')
+        res1 = t.exp(- distances_qz / 2. / sigma2_k)
+        res1 += t.exp(- distances_pz / 2. / sigma2_k)
+        res1 = t.matmul(res1, 1. - t.eye(n))
+        res1 = t.sum(res1) / (nf * nf - nf)
+        res2 = t.exp(- distances / 2. / sigma2_k)
+        res2 = t.sum(res2) * 2. / (nf * nf)
+        stat = res1 - res2
+        # elif self.config['kernel'] == 'IMQ':
+        #     Cbase = 2. * self.config['latent_dim'] * 2. * 1. # sigma2_p # for normal sigma2_p = 1
+        #     stat = 0.
+        #     for scale in [.1, .2, .5, 1., 2., 5., 10.]:
+        #         C = Cbase * scale
+        #         res1 = C / (C + distances_qz)
+        #         res1 += C / (C + distances_pz)
+        #         res1 = tf.multiply(res1, 1. - tf.eye(n))
+        #         res1 = tf.reduce_sum(res1) / (nf * nf - nf)
+        #         res2 = C / (C + distances)
+        #         res2 = tf.reduce_sum(res2) * 2. / (nf * nf)
+        #         stat += res1 - res2
+        return stat
+    
     def learnable_parameters(self):
         # wordembedding是固定值，因此必须从优化器的参数列表里移除。
         # word_embedding is constant parameter thus it must be dropped from list of parameters for optimizer
