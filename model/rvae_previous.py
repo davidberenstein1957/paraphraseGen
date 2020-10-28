@@ -125,11 +125,13 @@ class RVAE(nn.Module):
                 logvar = self.context_to_logvar(context_2)
                 std = t.exp(0.5 * logvar)
 
-                z_temp = Variable(t.randn([batch_size, self.params.latent_variable_size]))
-                if use_cuda:
-                    z_temp = z_temp.cuda()
+                # z_temp = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                # if use_cuda:
+                #     z_temp = z_temp.cuda()
 
-                z_tilda = z_temp * std + mu
+                # z_tilda = z_temp * std + mu
+                z_sampled = self.sample_gaussian(batch_size).cuda()
+                z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
 
                 kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
@@ -137,9 +139,7 @@ class RVAE(nn.Module):
             kld = None
             mu = None
             std = None
-
-        z_sampled = Variable(t.randn([batch_size, self.params.latent_variable_size])).cuda()
-        # z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
+       
         wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
 
         # What to do with this decoder input ? --> Slightly resolved
@@ -150,15 +150,16 @@ class RVAE(nn.Module):
         
         return out, final_state, kld, mu, std
 
-    def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=1):
+    def sample_z_tilda_from_posterior(self, z_logvar, z_mean, z_temperature=1):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
-        epsilon = Variable(t.randn(z_log_sigma.size())).cuda()
-        
-        return z_mean.add(t.mul(z_temperature, epsilon * t.exp(z_log_sigma)))  # N(mu, I * sigma**2)
+        epsilon = Variable(t.randn(z_logvar.size())).cuda()
+        std = t.exp(0.5 * z_logvar)
+
+        return epsilon * std + z_mean   # N(mu, I * sigma**2)
     
-    def sample_gaussian(self):
+    def sample_gaussian(self, batch_size):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
-        return Variable(t.randn([32, self.params.latent_variable_size])) # Dimension [batch_size x latent_dim]
+        return Variable(t.randn([batch_size, self.params.latent_variable_size])) # Dimension [batch_size x latent_dim]
     
     def imq_kernel(self, sample_qz: t.Tensor,
                          sample_pz: t.Tensor,
