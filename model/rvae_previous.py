@@ -125,11 +125,11 @@ class RVAE(nn.Module):
                 logvar = self.context_to_logvar(context_2)
                 std = t.exp(0.5 * logvar)
 
-                z_sampled = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                z_temp = Variable(t.randn([batch_size, self.params.latent_variable_size]))
                 if use_cuda:
-                    z_sampled = z_sampled.cuda()
+                    z_temp = z_temp.cuda()
 
-                z = z_sampled * std + mu
+                z_tilda = z_temp * std + mu
 
                 kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
@@ -138,14 +138,15 @@ class RVAE(nn.Module):
             mu = None
             std = None
 
-        z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
+        z_sampled = Variable(t.randn([batch_size, self.params.latent_variable_size])).cuda()
+        # z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
         wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
         
-        kld = 0.01 * kld + 3 * wasserstein_loss
+        kld = 0.1 * kld + 10 * wasserstein_loss
         
         return out, final_state, kld, mu, std
 
@@ -159,37 +160,37 @@ class RVAE(nn.Module):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
         return Variable(t.randn([32, self.params.latent_variable_size])) # Dimension [batch_size x latent_dim]
     
-    def imq_kernel(self, X: t.Tensor,
-               Y: t.Tensor,
-               h_dim: int):
-        batch_size = X.size(0)
+    def imq_kernel(self, sample_qz: t.Tensor,
+                         sample_pz: t.Tensor,
+                         h_dim: int):
+        batch_size = sample_pz.size(0)
 
-        norms_x = X.pow(2).sum(1, keepdim=True)  # batch_size x 1
-        prods_x = t.mm(X, X.t())  # batch_size x batch_size
-        dists_x = norms_x + norms_x.t() - 2 * prods_x
+        norms_pz = sample_pz.pow(2).sum(1, keepdim=True)  # batch_size x 1
+        prods_pz = t.mm(sample_pz, sample_pz.t())  # batch_size x batch_size
+        dists_pz = norms_pz + norms_pz.t() - 2 * prods_pz
 
-        norms_y = Y.pow(2).sum(1, keepdim=True)  # batch_size x 1
-        prods_y = t.mm(Y, Y.t())  # batch_size x batch_size
-        dists_y = norms_y + norms_y.t() - 2 * prods_y
+        norms_qz = sample_qz.pow(2).sum(1, keepdim=True)  # batch_size x 1
+        prods_qz = t.mm(sample_qz, sample_qz.t())  # batch_size x batch_size
+        dists_qz = norms_qz + norms_qz.t() - 2 * prods_qz
 
-        dot_prd = t.mm(X, Y.t())
-        dists_c = norms_x + norms_y.t() - 2 * dot_prd
+        dotprods = t.mm(sample_qz, sample_pz.t())
+        distances = norms_qz + norms_pz.t() - 2 * dotprods
 
         stats = 0
         Cbase = 2. * h_dim * 2. * 1.
         for scale in [.1, .2, .5, 1., 2., 5., 10.]:
             C = Cbase * scale
-            res1 = C / (C + dists_x)
-            res1 += C / (C + dists_y)
+            res1 = C / (C + dists_qz)
+            res1 += C / (C + dists_pz)
 
             if t.cuda.is_available():
                 res1 = (1 - t.eye(batch_size).cuda()) * res1
             else:
                 res1 = (1 - t.eye(batch_size)) * res1
 
-            res1 = res1.sum() / (batch_size - 1)
-            res2 = C / (C + dists_c)
-            res2 = res2.sum() * 2. / (batch_size)
+            res1 = res1.sum() / (batch_size*batch_size - batch_size)
+            res2 = C / (C + distances)
+            res2 = res2.sum() * 2. / (batch_size*batch_size)
             stats += res1 - res2
 
         return stats
