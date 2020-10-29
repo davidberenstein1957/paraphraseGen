@@ -134,7 +134,7 @@ class RVAE(nn.Module):
                 z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
 
                 p = t.distributions.Normal(mu, t.exp(logvar))
-                q = t.distributions.Normal(mu, 1)
+                q = t.distributions.Normal(mu, 2)
                 kld = t.sum(t.distributions.kl_divergence(p, q))
 
                 # kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
@@ -151,7 +151,7 @@ class RVAE(nn.Module):
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
         
-        kld = 0.1 * kld + 10 * wasserstein_loss
+        kld = 0.01 * kld + 10 * wasserstein_loss
         
         return out, final_state, kld, mu, None
 
@@ -325,7 +325,7 @@ class RVAE(nn.Module):
 
     def sample(self, batch_loader, seq_len, seed, use_cuda, State):
         # seed = Variable(t.from_numpy(seed).float())
-        seed = Variable(t.randn([1, parameters.latent_variable_size]))
+        # seed = Variable(t.randn([1, parameters.latent_variable_size]))
         if use_cuda:
             seed = seed.cuda()
 
