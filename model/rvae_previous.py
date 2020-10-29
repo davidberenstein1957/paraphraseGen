@@ -133,11 +133,11 @@ class RVAE(nn.Module):
                 z_sampled = self.sample_gaussian(batch_size).cuda()
                 z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
 
-                p = t.distributions.Normal(mu, t.exp(logvar))
-                q = t.distributions.Normal(mu, 2)
-                kld = t.sum(t.distributions.kl_divergence(p, q))
+                # p = t.distributions.Normal(mu, t.exp(logvar))
+                # q = t.distributions.Normal(mu, 2)
+                # kld = t.sum(t.distributions.kl_divergence(p, q))
 
-                # kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
+                kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
 
         else:
@@ -145,13 +145,13 @@ class RVAE(nn.Module):
             mu = None
             std = None
        
-        wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+        # wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
         
-        kld = 0.01 * kld + 10 * wasserstein_loss
+        # kld = 0.01 * kld + 10 * wasserstein_loss
         
         return out, final_state, kld, mu, None
 
@@ -277,7 +277,7 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
