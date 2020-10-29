@@ -151,7 +151,7 @@ class RVAE(nn.Module):
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
         
-        kld = 0.01 * kld + 10 * wasserstein_loss
+        kld = 0.1 * kld + 10 * wasserstein_loss
         
         return out, final_state, kld, mu, None
 
