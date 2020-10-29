@@ -123,7 +123,7 @@ class RVAE(nn.Module):
 
                 mu = self.context_to_mu(context_2)
                 logvar = self.context_to_logvar(context_2)
-                std = t.exp(0.5 * logvar)
+                # std = t.exp(0.5 * logvar)
 
                 # z_temp = Variable(t.randn([batch_size, self.params.latent_variable_size]))
                 # if use_cuda:
@@ -148,14 +148,14 @@ class RVAE(nn.Module):
         
         kld = 0.01 * kld + 10 * wasserstein_loss
         
-        return out, final_state, kld, mu, std
+        return out, final_state, kld, mu, None
 
-    def sample_z_tilda_from_posterior(self, z_logvar, z_mean, z_temperature=1):
+    def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=1):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
-        epsilon = Variable(t.randn(z_logvar.size())).cuda()
-        std = t.exp(0.5 * z_logvar)
+        z_log_sigma = z_log_sigma * z_temperature
+        epsilon = Variable(t.randn(z_log_sigma.size())).cuda()
 
-        return epsilon * std + z_mean   # N(mu, I * sigma**2)
+        return epsilon * t.exp(z_log_sigma) + z_mean   # N(mu, I * sigma**2)
     
     def sample_gaussian(self, batch_size):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
