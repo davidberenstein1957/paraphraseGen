@@ -133,9 +133,9 @@ class RVAE(nn.Module):
                 z_sampled = self.sample_gaussian(batch_size).cuda()
                 z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
 
-                p = t.distributions.Normal(mu, t.exp(0.5 logvar))
+                p = t.distributions.Normal(mu, t.exp(logvar))
                 q = t.distributions.Normal(mu, 1)
-                kld = t.distributions.kl_divergence(p, q).mean()
+                kld = t.sum(t.distributions.kl_divergence(p, q))
 
                 # kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
@@ -160,7 +160,7 @@ class RVAE(nn.Module):
         z_log_sigma = z_log_sigma * z_temperature
         epsilon = Variable(t.randn(z_log_sigma.size())).cuda()
 
-        return epsilon * t.exp(0.5 * z_log_sigma) + z_mean   # N(mu, I * sigma**2)
+        return epsilon * t.exp(z_log_sigma) + z_mean   # N(mu, I * sigma**2)
     
     def sample_gaussian(self, batch_size):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
@@ -325,6 +325,7 @@ class RVAE(nn.Module):
 
     def sample(self, batch_loader, seq_len, seed, use_cuda, State):
         # seed = Variable(t.from_numpy(seed).float())
+        seed = Variable(t.randn([1, parameters.latent_variable_size]))
         if use_cuda:
             seed = seed.cuda()
 
