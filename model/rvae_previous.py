@@ -131,7 +131,7 @@ class RVAE(nn.Module):
 
                 # z_tilda = z_temp * std + mu
                 z_sampled = self.sample_gaussian(batch_size).cuda()
-                z_tilda = self.sample_z_tilda_from_posterior(logvar, mu).cuda()
+                z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
 
                 # p = t.distributions.Normal(mu, t.exp(logvar))
                 # q = t.distributions.Normal(mu, 2)
@@ -155,7 +155,7 @@ class RVAE(nn.Module):
         
         return out, final_state, kld, mu, None
 
-    def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=1):
+    def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=0.5):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
         z_log_sigma = z_log_sigma * z_temperature
         epsilon = Variable(t.randn(z_log_sigma.size())).cuda()
