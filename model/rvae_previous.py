@@ -107,11 +107,12 @@ class RVAE(nn.Module):
                 
                 std = t.exp(0.5 * logvar_[-1])
                 
-                z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                
+                z_sampled = Variable(t.randn([batch_size, self.params.latent_variable_size]))
                 if use_cuda:
-                    z = z.cuda()
+                    z_sampled = z_sampled.cuda()
 
-                z = z * std + mu_[-1]
+                z_tilda = self.sample_z_tilda_from_posterior(logvar_[-1], mu_[-1], 0.5).cuda()
 
                 mu = t.stack(mu_)
                 logvar = t.stack(logvar_)
@@ -125,12 +126,12 @@ class RVAE(nn.Module):
                 logvar = self.context_to_logvar(context_2)
                 # std = t.exp(0.5 * logvar)
 
-                # z_temp = Variable(t.randn([batch_size, self.params.latent_variable_size]))
-                # if use_cuda:
-                #     z_temp = z_temp.cuda()
+                z_sampled = self.sample_gaussian(batch_size)
+                if use_cuda:
+                    z_sampled = z_sampled.cuda()
 
                 # z_tilda = z_temp * std + mu
-                z_sampled = self.sample_gaussian(batch_size).cuda()
+                
                 z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
 
                 # p = t.distributions.Normal(mu, t.exp(logvar))
@@ -277,7 +278,7 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 121 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
