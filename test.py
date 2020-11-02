@@ -154,9 +154,9 @@ if __name__ == "__main__":
 
         hyp__ = []
         ref_ = []
-        for i in range(len(data))[:10]:
+        for i in range(len(data))[:1]:
 
-            ref_.append(data[i])
+            ref_.append(data[i].replace('\n', ''))
             hyp_ = []
             for iteration in range(args.num_sample):
                 seed = Variable(t.randn([1, parameters.latent_variable_size]))
@@ -176,7 +176,7 @@ if __name__ == "__main__":
                             print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
-
+        print(hyp__, ref_)
         scores = get_evaluation_scores(hyp__, ref_)
         print(scores)
         meteor_result.append(statistics.mean(scores["METEOR"]))
