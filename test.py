@@ -9,7 +9,7 @@ from six.moves import cPickle
 from torch.autograd import Variable
 
 from evaluation.paraphrase_evaluation import get_evaluation_scores
-from model.rvae import RVAE
+from model.rvae_previous import RVAE
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
 from utils.tensor import PreProcessor
@@ -17,7 +17,7 @@ from utils.tensor import PreProcessor
 if __name__ == "__main__":
 
     # assert os.path.exists("./trained_RVAE"), "trained model not found"
-    save_path = "/content/drive/My Drive/thesis/"
+    save_path = "/content/drive/My Drive/thesis/results/"
     path = "paraphraseGen/"
     parser = argparse.ArgumentParser(description="Sampler")
     parser.add_argument("--use-cuda", type=bool, default=True, metavar="CUDA", help="use cuda (default: True)")
@@ -51,9 +51,9 @@ if __name__ == "__main__":
         save_path = os.path.join(save_path, 'wae')
     elif args.hrvae:
         save_path = os.path.join(save_path, 'hrvae')
-    elif args.annealing:
+    elif args.annealing == 'cyc':
         save_path = os.path.join(save_path, 'cyclical')
-    elif args.annealing:
+    elif args.adam:
         save_path = os.path.join(save_path, 'adam')
     else:
         save_path = os.path.join(save_path, 'base')
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     """ ======================================================================================================= """
 
     """======================================== MODEL loading ================================================= """
-    print("Started loading")
+    print("Started loading", save_path)
     start_time = time.time()
     rvae = RVAE(parameters, parameters_2, path)
     num_training_iters = 120000
@@ -170,10 +170,10 @@ if __name__ == "__main__":
                     for k in range(n_best):
                         sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
                         if batch_loader.end_token in sen:
-                            # print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
+                            print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
                             hyp_.append(sen[: sen.index(batch_loader.end_token)])
                         else:
-                            # print("generate sentence:     " + sen)
+                            print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
 

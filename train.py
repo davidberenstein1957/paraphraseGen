@@ -61,9 +61,9 @@ if __name__ == "__main__":
         save_path = os.path.join(save_path, 'wae')
     elif args.hrvae:
         save_path = os.path.join(save_path, 'hrvae')
-    elif args.annealing:
+    elif args.annealing == 'cyc':
         save_path = os.path.join(save_path, 'cyclical')
-    elif args.annealing:
+    elif args.adam:
         save_path = os.path.join(save_path, 'adam')
     else:
         save_path = os.path.join(save_path, 'base')
