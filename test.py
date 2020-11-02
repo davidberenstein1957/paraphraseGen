@@ -176,9 +176,8 @@ if __name__ == "__main__":
                             print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
-        print(hyp__, ref_)
+        
         scores = get_evaluation_scores(hyp__, ref_)
-        print(scores)
         meteor_result.append(statistics.mean(scores["METEOR"]))
         blue_result.append(statistics.mean(scores["BLUE"]))
         rouge_result.append(statistics.mean(scores["ROUGE"]))

@@ -175,6 +175,7 @@ if __name__ == "__main__":
     else:
         args.num_iterations = (int(args.num_iterations / coef_modulo) + 1) * coef_modulo
 
+    print(save_path)
     for iteration in range(args.num_iterations):
         start_index = (start_index + args.batch_size) % (modulo_operator)
 
