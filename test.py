@@ -12,7 +12,7 @@ from evaluation.paraphrase_evaluation import get_evaluation_scores
 from model.rvae import RVAE
 from utils.batch_loader import BatchLoader
 from utils.parameters import Parameters
-from utils.tensor import preprocess_data
+from utils.tensor import PreProcessor
 
 if __name__ == "__main__":
 
@@ -80,7 +80,8 @@ if __name__ == "__main__":
 
     tensor_files = [[path + f"data/test_word_tensor_{args.embeddings_name}.npy"], [path + f"data/test_character_tensor_{args.embeddings_name}.npy"]]
 
-    preprocess_data(data_files, idx_files, tensor_files, args.use_file, str)
+    preprocessor = PreProcessor(idx_files)
+    preprocessor.preprocess_data(data_files, idx_files, tensor_files, args.use_file, str)
 
     batch_loader = BatchLoader(data_files, idx_files, tensor_files)
     parameters = Parameters(
