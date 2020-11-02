@@ -203,7 +203,7 @@ if __name__ == "__main__":
             print("------------------------------")
 
         if (iteration % coef_modulo == 0) & (iteration != 0):
-            t.save(rvae.state_dict(), save_path + f"/trained_RVAE_{iteration}")
+            # t.save(rvae.state_dict(), save_path + f"/trained_RVAE_{iteration}")
             # np.save(save_path + f"/ce_result_{iteration}.npy".format(args.ce_result), np.array(ce_result))
             # np.save(save_path + f"/kld_result_npy_{iteration}.npy".format(args.kld_result), np.array(kld_result))
             print("MODEL SAVED")
@@ -244,6 +244,6 @@ if __name__ == "__main__":
             ce_result.append(cross_entropy.data.cpu().numpy())
             kld_result.append(kld.data.cpu().numpy() * coef)
     iteration += 1
-    t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration}")
-    np.save(save_path + f"ce_result.npy".format(args.ce_result), np.array(ce_result))
-    np.save(save_path + f"kld_result_npy".format(args.kld_result), np.array(kld_result))
+    # t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration}")
+    # np.save(save_path + f"ce_result.npy".format(args.ce_result), np.array(ce_result))
+    # np.save(save_path + f"kld_result_npy".format(args.kld_result), np.array(kld_result))

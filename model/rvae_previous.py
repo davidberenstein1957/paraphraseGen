@@ -132,13 +132,13 @@ class RVAE(nn.Module):
 
                 # z_tilda = z_temp * std + mu
                 
-                z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
+                z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 1).cuda()
 
-                # p = t.distributions.Normal(mu, t.exp(logvar))
-                # q = t.distributions.Normal(mu, 2)
-                # kld = t.sum(t.distributions.kl_divergence(p, q))
+                p = t.distributions.Normal(mu, t.exp(logvar))
+                q = t.distributions.Normal(mu, 2)
+                kld = t.sum(t.distributions.kl_divergence(p, q))
 
-                kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
+                # kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
 
 
         else:
@@ -146,13 +146,13 @@ class RVAE(nn.Module):
             mu = None
             std = None
        
-        # wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+        wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
         
-        # kld = 0.01 * kld + 10 * wasserstein_loss
+        kld = 0.01 * kld + 10 * wasserstein_loss
         
         return out, final_state, kld, mu, None
 
@@ -235,50 +235,20 @@ class RVAE(nn.Module):
 
             ''' ================================================================================================================================
             '''
-            # exit()
             # 这里encoder-input是原始句子xo的输入（句子翻转），encoder-input2是释义句xp的输入（句子翻转），decoder-input是释义句加加开始符号
             logits, _, kld, _, _ = self(unk_idx, dropout,
                                         encoder_word_input, encoder_character_input,
                                         encoder_word_input_2, encoder_character_input_2,
                                         decoder_word_input_2, decoder_character_input_2,
                                         z=None)
-
-            # print(logits.size(), target.size())
-            # [batch_size, seq_len, _] = logits.size()
-            # sentence_ = []
-            # for i in range(batch_size):
-            #     sentence = ''
-            #     for j in range(seq_len):
-            #         sentence += batch_loader_2.sample_word_from_distribution(F.softmax(logits[i,j]).data.cpu().numpy())
-            #         sentence += ' '
-            #     if '</s>' in sentence:
-            #         sentence = sentence.split(' </s>')[0]
-            #     if ' _ ' in sentence:
-            #         sentence = sentence.split(' _')[0]
-            #     sentence_.append(sentence)
-            # hypothesis_embedding = list(self.embed(sentence_).numpy())
-            # sentence_ = []
-            # for i in range(batch_size):
-            #     sentence = ''
-            #     for j in range(seq_len):
-            #         sentence += batch_loader_2.decode_word(target[i,j])
-            #         sentence += ' '
-            #     sentence = sentence.split(' </s>')[0]
-            #     sentence_.append(sentence)
-            # reference_embedding = list(self.embed(sentence_).numpy())
-            sim_score = 1
-            # for (hyp, ref) in zip(hypothesis_embedding, reference_embedding):
-            #     sim_score += dot(hyp, ref) / (norm(hyp) * norm(ref))
-            # sim_score = sim_score / batch_size
             
-            # logits = logits.view(-1, self.params.word_vocab_size)
             logits = logits.view(-1, self.params_2.word_vocab_size)
             target = target.view(-1)
             
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 121 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 2 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
