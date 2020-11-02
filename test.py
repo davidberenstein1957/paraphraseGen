@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     # Path to test file ---
     parser.add_argument(
-        "--test-file", type=str, default=path + "data/test_{parser.parse_args().data_name}.txt", metavar="NS", help="test file path (default: data/test.txt)"
+        "--test-file", type=str, default=path + f"data/test_{parser.parse_args().data_name}.txt", metavar="NS", help="test file path (default: data/test.txt)"
     )
 
     args = parser.parse_args()
