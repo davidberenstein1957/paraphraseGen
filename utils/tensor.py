@@ -7,12 +7,12 @@ from six.moves import cPickle
 
 from .functional import *
 
-idx_files = ["paraphraseGen/data/words_vocab.pkl", "paraphraseGen/data/characters_vocab.pkl"]
+# idx_files = ["paraphraseGen/data/words_vocab.pkl", "paraphraseGen/data/characters_vocab.pkl"]
 
-[idx_to_word, idx_to_char] = [cPickle.load(open(file, "rb")) for file in idx_files]
-[word_to_idx, char_to_idx] = [dict(zip(idx, range(len(idx)))) for idx in [idx_to_word, idx_to_char]]
+# [idx_to_word, idx_to_char] = [cPickle.load(open(file, "rb")) for file in idx_files]
+# [word_to_idx, char_to_idx] = [dict(zip(idx, range(len(idx)))) for idx in [idx_to_word, idx_to_char]]
 
-max_word_len = np.amax([len(word) for word in idx_to_word])
+# max_word_len = np.amax([len(word) for word in idx_to_word])
 
 
 def encode_characters(characters: list):

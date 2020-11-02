@@ -33,7 +33,6 @@ if __name__ == "__main__":
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
     parser.add_argument("--wae", type=bool, default=False)
-    parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, mscoco, both
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
 
@@ -41,6 +40,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--test-file", type=str, default=path + "data/test_{parser.parse_args().data_name}.txt", metavar="NS", help="test file path (default: data/test.txt)"
     )
+
+    args = parser.parse_args()
 
     if args.res_model:
         save_path = os.path.join(save_path, 'stacked')
@@ -63,8 +64,6 @@ if __name__ == "__main__":
         save_path = os.path.join(save_path, 'coco')
     else:
         save_path = os.path.join(save_path, 'both')
-
-    args = parser.parse_args()
 
     str = ""
     if not args.use_file:
