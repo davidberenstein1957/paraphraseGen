@@ -24,7 +24,7 @@ class PreProcessor:
         self.max_word_len = np.amax([len(word) for word in idx_to_word])
 
 
-    def encode_characters(self, characters: list, max_word_len):
+    def encode_characters(self, characters: list):
         """
         [summary] encodes a list of characters to idx
 
@@ -36,8 +36,8 @@ class PreProcessor:
         """
         word_len = len(characters)
         to_add = self.max_word_len - word_len
-        characters_idx = [char_to_idx[i] for i in characters] + to_add * [char_to_idx[""]]
-        
+        characters_idx = [self.char_to_idx[i] for i in characters] + to_add * [self.char_to_idx[""]]
+
         return characters_idx
 
 
