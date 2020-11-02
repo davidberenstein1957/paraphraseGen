@@ -104,6 +104,7 @@ if __name__ == "__main__":
         args.embeddings_name,
         args.res_model,
         args.hrvae,
+        args.wae,
     )
 
     """ =================== Doing the same for encoder-2 ===============================================
@@ -134,6 +135,7 @@ if __name__ == "__main__":
         args.embeddings_name,
         args.res_model,
         args.hrvae,
+        args.wae,
     )
     """=================================================================================================
     """
