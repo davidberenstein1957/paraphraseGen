@@ -7,12 +7,12 @@ from six.moves import cPickle
 
 from .functional import *
 
-idx_files = ["paraphraseGen/data/words_vocab.pkl", "paraphraseGen/data/characters_vocab.pkl"]
+# idx_files = ["paraphraseGen/data/words_vocab.pkl", "paraphraseGen/data/characters_vocab.pkl"]
 
-[idx_to_word, idx_to_char] = [cPickle.load(open(file, "rb")) for file in idx_files]
-[word_to_idx, char_to_idx] = [dict(zip(idx, range(len(idx)))) for idx in [idx_to_word, idx_to_char]]
+# [idx_to_word, idx_to_char] = [cPickle.load(open(file, "rb")) for file in idx_files]
+# [word_to_idx, char_to_idx] = [dict(zip(idx, range(len(idx)))) for idx in [idx_to_word, idx_to_char]]
 
-max_word_len = np.amax([len(word) for word in idx_to_word])
+# max_word_len = np.amax([len(word) for word in idx_to_word])
 
 
 def encode_characters(characters: list):
@@ -42,6 +42,10 @@ def preprocess_data(data_files: list, idx_files: list, tensor_files: list, file:
         file (bool): [description] indicates whether or not to read an existing file
         str (str, optional): [description]. start string for a potential new file. Defaults to ''.
     """
+    [idx_to_word, idx_to_char] = [cPickle.load(open(file, "rb")) for file in idx_files]
+    [word_to_idx, char_to_idx] = [dict(zip(idx, range(len(idx)))) for idx in [idx_to_word, idx_to_char]]
+
+    max_word_len = np.amax([len(word) for word in idx_to_word])
 
     if file:
         data = [open(file, "r").read() for file in data_files]
