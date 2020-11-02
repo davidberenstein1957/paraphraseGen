@@ -26,25 +26,44 @@ if __name__ == "__main__":
     parser.add_argument("--beam-top", type=int, default=1, metavar="NS", help="beam top (default: 1)")
     parser.add_argument("--beam-size", type=int, default=50, metavar="NS", help="beam size (default: 10)")
     parser.add_argument("--use-file", type=bool, default=True, metavar="NS", help="use file (default: False)")
+    parser.add_argument("--adam", type=bool, default=False)
     parser.add_argument("--hrvae", type=bool, default=False)
+    parser.add_argument("--annealing", type=str, default="mono")  # none, mono, cyc
+    parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
-    data_name = "quora"  # quora, mscoco, both
-    parser.add_argument("--data_name", type=str, default=data_name)  # quora, mscoco, both
-    embeddings_name = "quora"  # quora, mscoco, both
+    parser.add_argument("--wae", type=bool, default=False)
     parser.add_argument("--embeddings_name", type=str, default=data_name)  # quora, mscoco, both
+    parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
+    parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
 
     # Path to test file ---
     parser.add_argument(
-        "--test-file", type=str, default=path + "data/test.txt", metavar="NS", help="test file path (default: data/test.txt)"
+        "--test-file", type=str, default=path + "data/test_{parser.parse_args().data_name}.txt", metavar="NS", help="test file path (default: data/test.txt)"
     )
-    parser.add_argument(
-        "--save-model",
-        type=str,
-        default="./trained_RVAE",
-        metavar="NS",
-        help="trained model save path (default: ./trained_RVAE)",
-    )
+
+    if args.res_model:
+        save_path = os.path.join(save_path, 'stacked')
+    elif args.embeddings_name == 'both':
+        save_path = os.path.join(save_path, 'word2vec')
+    elif args.wae:
+        save_path = os.path.join(save_path, 'wae')
+    elif args.hrvae:
+        save_path = os.path.join(save_path, 'hrvae')
+    elif args.annealing:
+        save_path = os.path.join(save_path, 'cyclical')
+    elif args.annealing:
+        save_path = os.path.join(save_path, 'adam')
+    else:
+        save_path = os.path.join(save_path, 'base')
+
+    if args.data_name == 'quora':
+        save_path = os.path.join(save_path, 'quora')
+    elif args.data_name == 'coco':
+        save_path = os.path.join(save_path, 'coco')
+    else:
+        save_path = os.path.join(save_path, 'both')
+
     args = parser.parse_args()
 
     str = ""
@@ -58,9 +77,9 @@ if __name__ == "__main__":
     """
     data_files = [args.test_file]
 
-    idx_files = [path + f"data/words_vocab_{embeddings_name}.pkl", path + f"data/characters_vocab_{embeddings_name}.pkl"]
+    idx_files = [path + f"data/words_vocab_{args.embeddings_name}.pkl", path + f"data/characters_vocab_{args.embeddings_name}.pkl"]
 
-    tensor_files = [[path + f"data/test_word_tensor_{embeddings_name}.npy"], [path + f"data/test_character_tensor_{embeddings_name}.npy"]]
+    tensor_files = [[path + f"data/test_word_tensor_{args.embeddings_name}.npy"], [path + f"data/test_character_tensor_{args.embeddings_name}.npy"]]
 
     preprocess_data(data_files, idx_files, tensor_files, args.use_file, str)
 
@@ -73,15 +92,16 @@ if __name__ == "__main__":
         embeddings_name,
         args.res_model,
         args.hrvae,
+        args.wae,
     )
 
     """ ============================ BatchLoader for Question-2 ===============================================
     """
-    data_files = [path + f"data/super/train_{data_name}_2.txt"]
+    data_files = [path + f"data/super/train_{args.data_name}_2.txt"]
 
-    idx_files = [path + f"data/super/words_vocab_{embeddings_name}_2.pkl", path + f"data/super/characters_vocab_{embeddings_name}_2.pkl"]
+    idx_files = [path + f"data/super/words_vocab_{args.embeddings_name}_2.pkl", path + f"data/super/characters_vocab_{args.embeddings_name}_2.pkl"]
 
-    tensor_files = [[path + f"data/super/train_word_tensor_{embeddings_name}_2.npy"], [path + f"data/super/train_character_tensor_{embeddings_name}_2.npy"]]
+    tensor_files = [[path + f"data/super/train_word_tensor_{args.embeddings_name}_2.npy"], [path + f"data/super/train_character_tensor_{args.embeddings_name}_2.npy"]]
     batch_loader_2 = BatchLoader(data_files, idx_files, tensor_files)
     parameters_2 = Parameters(
         batch_loader_2.max_word_len,
@@ -91,6 +111,7 @@ if __name__ == "__main__":
         embeddings_name,
         args.res_model,
         args.hrvae,
+        args.wae,
     )
 
     """ ==================================== Parameters Initialising ===========================================
@@ -157,16 +178,17 @@ if __name__ == "__main__":
             hyp__.append(hyp_)
 
         scores = get_evaluation_scores(hyp__, ref_)
+        print(scores)
         meteor_result.append(statistics.mean(scores["METEOR"]))
         blue_result.append(statistics.mean(scores["BLUE"]))
         rouge_result.append(statistics.mean(scores["ROUGE"]))
         ter_result.append(statistics.mean(scores["TER"]))
         muse_result.append(statistics.mean(scores["MUSE"]))
     
-    np.save(save_path + f"meteor_result.npy", np.array(meteor_result))
-    np.save(save_path + f"blue_result", np.array(blue_result))
-    np.save(save_path + f"rouge_result.npy", np.array(rouge_result))
-    np.save(save_path + f"ter_result", np.array(ter_result))
-    np.save(save_path + f"muse_result", np.array(muse_result))
+    np.save(save_path + f"/meteor_result.npy", np.array(meteor_result))
+    np.save(save_path + f"/blue_result", np.array(blue_result))
+    np.save(save_path + f"/rouge_result.npy", np.array(rouge_result))
+    np.save(save_path + f"/ter_result", np.array(ter_result))
+    np.save(save_path + f"/muse_result", np.array(muse_result))
 
     

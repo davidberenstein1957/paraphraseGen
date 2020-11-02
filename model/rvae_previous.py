@@ -104,11 +104,8 @@ class RVAE(nn.Module):
                 for entry in context_:
                     mu_.append(self.context_to_mu(entry))
                     logvar_.append(self.context_to_logvar(entry))
-                
-                std = t.exp(0.5 * logvar_[-1])
-                
-                
-                z_sampled = Variable(t.randn([batch_size, self.params.latent_variable_size]))
+                     
+                z_sampled = self.sample_gaussian(batch_size)
                 if use_cuda:
                     z_sampled = z_sampled.cuda()
 
@@ -151,14 +148,6 @@ class RVAE(nn.Module):
             kld = None
             mu = None
             std = None
-        
-        if self.params.wae:
-            z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
-            p = t.distributions.Normal(mu, t.exp(logvar))
-            q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
-            kld = t.sum(t.distributions.kl_divergence(p, q))
-            wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
-            kld = 0.01 * kld + 10 * wasserstein_loss
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
@@ -258,7 +247,10 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            if self.params.wae:
+                loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            else:
+                loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
