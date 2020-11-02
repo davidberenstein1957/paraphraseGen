@@ -47,12 +47,6 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Removing, is already some previous files exist from last execution of program
-    # if os.path.exists("data/test_word_tensor.npy"):
-    #     os.remove("data/test_word_tensor.npy")
-    # if os.path.exists("data/test_character_tensor.npy"):
-    #     os.remove("data/test_character_tensor.npy")
-
     str = ""
     if not args.use_file:
         str = raw_input("Input Question : ")

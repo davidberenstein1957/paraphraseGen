@@ -35,6 +35,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
+    parser.add_argument("--wae", type=bool, default=False)
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
 
@@ -56,6 +57,8 @@ if __name__ == "__main__":
         save_path = os.path.join(save_path, 'stacked')
     elif args.embeddings_name == 'both':
         save_path = os.path.join(save_path, 'word2vec')
+    elif args.wae:
+        save_path = os.path.join(save_path, 'wae')
     elif args.hrvae:
         save_path = os.path.join(save_path, 'hrvae')
     elif args.annealing:

@@ -112,48 +112,58 @@ class RVAE(nn.Module):
                 if use_cuda:
                     z_sampled = z_sampled.cuda()
 
-                z_tilda = self.sample_z_tilda_from_posterior(logvar_[-1], mu_[-1], 0.5).cuda()
-
                 mu = t.stack(mu_)
                 logvar = t.stack(logvar_)
 
-                kld = -0.5 * t.sum(1 + logvar - mu.pow(2) - logvar.exp())
-                kld = kld / mu.shape[0]
+                if self.params.wae:
+                    z_tilda = self.sample_z_tilda_from_posterior(logvar_[-1], mu_[-1], 1).cuda()
+                    p = t.distributions.Normal(mu, t.exp(logvar))
+                    q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
+                    kld = t.sum(t.distributions.kl_divergence(p, q))
+                    kld = kld / mu.shape[0]
+                    wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+                    kld = 0.01 * kld + 10 * wasserstein_loss
+                else:
+                    z_tilda = self.sample_z_tilda_from_posterior(logvar_[-1], mu_[-1], 0.5).cuda()
+                    kld = -0.5 * t.sum(1 + logvar - mu.pow(2) - logvar.exp())
+                    kld = kld / mu.shape[0]
             
             else:
 
                 mu = self.context_to_mu(context_2)
                 logvar = self.context_to_logvar(context_2)
-                # std = t.exp(0.5 * logvar)
 
                 z_sampled = self.sample_gaussian(batch_size)
                 if use_cuda:
                     z_sampled = z_sampled.cuda()
-
-                # z_tilda = z_temp * std + mu
                 
-                z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 1).cuda()
-
-                p = t.distributions.Normal(mu, t.exp(logvar))
-                q = t.distributions.Normal(mu, 2)
-                kld = t.sum(t.distributions.kl_divergence(p, q))
-
-                # kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
-
-
+                if self.params.wae:
+                    z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 1).cuda()
+                    p = t.distributions.Normal(mu, t.exp(logvar))
+                    q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
+                    kld = t.sum(t.distributions.kl_divergence(p, q))
+                    wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+                    kld = 0.01 * kld + 10 * wasserstein_loss
+                else:
+                    z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
+                    kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
         else:
             kld = None
             mu = None
             std = None
-       
-        wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+        
+        if self.params.wae:
+            z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
+            p = t.distributions.Normal(mu, t.exp(logvar))
+            q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
+            kld = t.sum(t.distributions.kl_divergence(p, q))
+            wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+            kld = 0.01 * kld + 10 * wasserstein_loss
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
-        
-        kld = 0.01 * kld + 10 * wasserstein_loss
-        
+                
         return out, final_state, kld, mu, None
 
     def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=0.5):
@@ -248,7 +258,7 @@ class RVAE(nn.Module):
             # 前面logit 是每一步输出的词汇表所有词的概率， target是每一步对应的词的索引不用变成onehot，函数内部做变换
             cross_entropy = F.cross_entropy(logits, target)
             
-            loss = 2 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
