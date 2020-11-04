@@ -168,7 +168,7 @@ if __name__ == "__main__":
     start_time = time.time()
 
     coef_modulo = 10000
-    sample_modulo = 10000
+    sample_modulo = 1000
 
     if int(args.num_iterations / coef_modulo) % 2 == 0:
         args.num_iterations = int(args.num_iterations / coef_modulo) * coef_modulo

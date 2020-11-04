@@ -113,7 +113,7 @@ class RVAE(nn.Module):
                 logvar = t.stack(logvar_)
 
                 if self.params.wae:
-                    z_tilda = self.sample_z_tilda_from_posterior(logvar_[-1], mu_[-1], 1).cuda()
+                    z_tilda = self.sample_z_tilda_from_posterior(z_sampled, logvar_[-1], mu_[-1], 1).cuda()
                     p = t.distributions.Normal(mu, t.exp(logvar))
                     q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
                     kld = t.sum(t.distributions.kl_divergence(p, q))
@@ -121,7 +121,7 @@ class RVAE(nn.Module):
                     wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
                     kld = 0.01 * kld + 10 * wasserstein_loss
                 else:
-                    z_tilda = self.sample_z_tilda_from_posterior(logvar_[-1], mu_[-1], 0.5).cuda()
+                    z_tilda = self.sample_z_tilda_from_posterior(z_sampled,logvar_[-1], mu_[-1], 0.5).cuda()
                     kld = -0.5 * t.sum(1 + logvar - mu.pow(2) - logvar.exp())
                     kld = kld / mu.shape[0]
             
@@ -135,14 +135,14 @@ class RVAE(nn.Module):
                     z_sampled = z_sampled.cuda()
                 
                 if self.params.wae:
-                    z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 1).cuda()
+                    z_tilda = self.sample_z_tilda_from_posterior(z_sampled, logvar, mu, 1).cuda()
                     p = t.distributions.Normal(mu, t.exp(logvar))
                     q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
                     kld = t.sum(t.distributions.kl_divergence(p, q))
                     wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
                     kld = 0.01 * kld + 10 * wasserstein_loss
                 else:
-                    z_tilda = self.sample_z_tilda_from_posterior(logvar, mu, 0.5).cuda()
+                    z_tilda = self.sample_z_tilda_from_posterior(z_sampled, logvar, mu, 0.5).cuda()
                     kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean().squeeze()
         else:
             kld = None
@@ -155,12 +155,9 @@ class RVAE(nn.Module):
                 
         return out, final_state, kld, mu, None
 
-    def sample_z_tilda_from_posterior(self, z_log_sigma, z_mean, z_temperature=0.5):
-        """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
-        z_log_sigma = z_log_sigma * z_temperature
-        epsilon = Variable(t.randn(z_log_sigma.size())).cuda()
-
-        return epsilon * t.exp(z_log_sigma) + z_mean   # N(mu, I * sigma**2)
+    def sample_z_tilda_from_posterior(self, z_sampled, z_log_sigma, z_mean, z_temperature=0.5):
+        """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""    
+        return z_sampled * t.exp(z_log_sigma * z_temperature) + z_mean   # N(mu, I * sigma**2)
     
     def sample_gaussian(self, batch_size):
         """(Differentiably!) draw sample from Gaussian with given shape, subject to random noise epsilon"""
