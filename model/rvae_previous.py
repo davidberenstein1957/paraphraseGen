@@ -122,8 +122,10 @@ class RVAE(nn.Module):
                     kld = 0.01 * kld + 10 * wasserstein_loss
                 else:
                     z_tilda = self.sample_z_tilda_from_posterior(z_sampled,logvar_[-1], mu_[-1], 0.5).cuda()
-                    kld = -0.5 * t.sum(1 + logvar - mu.pow(2) - logvar.exp())
-                    kld = kld / mu.shape[0]
+                    kld = 0
+                    for i in range(len(mu_)):
+                        kld += (-0.5 * t.sum(logvar_[i] - t.pow(mu_[i], 2) - t.exp(logvar_[i]) + 1, 1)).mean().squeeze()
+                    kld = kld / len(mu_)
             
             else:
 
@@ -247,7 +249,7 @@ class RVAE(nn.Module):
             if self.params.wae:
                 loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
             else:
-                loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+                loss = 121 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
@@ -424,10 +426,6 @@ class RVAE(nn.Module):
             ).t().contiguous().view(1, -1)
 
             trg_emb = self.embedding_2.word_embed(Variable(input).transpose(1, 0))
-
-            # print trg_emb.size()
-            # print seed.size()
-            
 
             trg_h, dec_states = self.decoder.only_decoder_beam(trg_emb, seed, drop_prob, encoder_output, dec_states)
 
