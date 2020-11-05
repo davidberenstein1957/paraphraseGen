@@ -9,7 +9,7 @@ from nltk.translate.meteor_score import meteor_score
 from numpy import dot
 from numpy.linalg import norm
 from rouge import Rouge
-tf.enable_eager_execution()
+tf.compat.v1.enable_eager_execution
 
 
 

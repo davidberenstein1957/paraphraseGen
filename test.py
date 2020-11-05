@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     for i in range(1, int(120000 / 10000)):
         model_state = i * coef_modulo
-        model_state = 110000
+        model_state = 10000
         rvae.load_state_dict(t.load(save_path + f"/trained_RVAE_{model_state}"))
         if args.use_cuda:
             rvae = rvae.cuda()

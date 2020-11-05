@@ -215,41 +215,41 @@ if __name__ == "__main__":
             print("MODEL SAVED")
 
         if iteration % int(sample_modulo) == 0:
-            index = randint(0, len(data) - 1)
+            # index = randint(0, len(data) - 1)
 
-            ref = data[index]
-            hyp_ = []
+            # ref = data[iteration]
+            # hyp_ = []
 
-            if args.use_file:
-                print("original sentence:     " + ref)
-            else:
-                print("original sentence:     " + text_input + "\n")
+            # if args.use_file:
+            #     print("original sentence:     " + ref)
+            # else:
+            #     print("original sentence:     " + text_input + "\n")
 
-            for _ in range(args.num_sample):
+            # for _ in range(args.num_sample):
 
-                seed = Variable(t.randn([1, parameters.latent_variable_size]))
-                seed = seed.cuda()
+            #     seed = Variable(t.randn([1, parameters.latent_variable_size]))
+            #     seed = seed.cuda()
 
-                results, scores = rvae.sampler(
-                    batch_loader, batch_loader_2, 50, seed, args.use_cuda, index, args.beam_size, args.beam_top
-                )
+            #     results, scores = rvae.sampler(
+            #         batch_loader, batch_loader_2, 50, seed, args.use_cuda, iteration, args.beam_size, args.beam_top
+            #     )
 
-                for tt in results:
+            #     for tt in results:
 
-                    for k in range(args.beam_top):
-                        sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
-                        if batch_loader.end_token in sen:
-                            hyp = sen[: sen.index(batch_loader.end_token)]
-                            print("generate sentence:     " + hyp)
-                        else:
-                            hyp = sen
-                            print("generate sentence:     " + hyp)
+            #         for k in range(args.beam_top):
+            #             sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
+            #             if batch_loader.end_token in sen:
+            #                 hyp = sen[: sen.index(batch_loader.end_token)]
+            #                 print("generate sentence:     " + hyp)
+            #             else:
+            #                 hyp = sen
+            #                 print("generate sentence:     " + hyp)
 
-                    hyp_.append(hyp)
+            #         hyp_.append(hyp)
 
             ce_result.append(cross_entropy.data.cpu().numpy())
             kld_result.append(kld.data.cpu().numpy() * coef)
     iteration += 1
     t.save(rvae.state_dict(), save_path + f"/trained_RVAE_{iteration}")
     np.save(save_path + f"/ce_result.npy".format(args.ce_result), np.array(ce_result))
-    np.save(save_path + f"/kld_result_npy".format(args.kld_result), np.array(kld_result))
+    np.save(save_path + f"/kld_result.npy".format(args.kld_result), np.array(kld_result))
