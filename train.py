@@ -188,6 +188,9 @@ if __name__ == "__main__":
 
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
 
+        ce_result.append(cross_entropy.data.cpu().numpy())
+        kld_result.append(kld.data.cpu().numpy() * coef)
+
         if ((iteration % int(sample_modulo) == 0)) & (iteration != 0):
             print("\n")
             print("------------TRAIN-------------")
@@ -214,7 +217,7 @@ if __name__ == "__main__":
             # np.save(save_path + f"/kld_result_npy_{iteration}.npy".format(args.kld_result), np.array(kld_result))
             print("MODEL SAVED")
 
-        if iteration % int(sample_modulo) == 0:
+        # if iteration % int(sample_modulo) == 0:
             # index = randint(0, len(data) - 1)
 
             # ref = data[iteration]
@@ -247,8 +250,7 @@ if __name__ == "__main__":
 
             #         hyp_.append(hyp)
 
-            ce_result.append(cross_entropy.data.cpu().numpy())
-            kld_result.append(kld.data.cpu().numpy() * coef)
+            
     iteration += 1
     t.save(rvae.state_dict(), save_path + f"/trained_RVAE_{iteration}")
     np.save(save_path + f"/ce_result.npy".format(args.ce_result), np.array(ce_result))
