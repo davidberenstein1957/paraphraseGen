@@ -147,10 +147,10 @@ if __name__ == "__main__":
     rouge_result_std = []
     ter_result_std = []
     muse_result_std = []
-
-    for i in range(1, int(120000 / 10000)):
+    print(range(1, int(120000 / 10000)+1)
+    for i in range(1, int(120000 / 10000)+1):
         model_state = i * coef_modulo
-        model_state = 10000
+        # model_state = 10000
         rvae.load_state_dict(t.load(save_path + f"/trained_RVAE_{model_state}"))
         if args.use_cuda:
             rvae = rvae.cuda()
@@ -161,7 +161,7 @@ if __name__ == "__main__":
         hyp__ = []
         ref_ = []
         for j in range(100):
-            j = random.randint(0, len(data))
+            # j = random.randint(0, len(data))
             ref_.append(data[j].replace('\n', ''))
             hyp_ = []
             for iteration in range(args.num_sample):
@@ -176,36 +176,36 @@ if __name__ == "__main__":
                     for k in range(n_best):
                         sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
                         if batch_loader.end_token in sen:
-                            print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
+                            # print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
                             hyp_.append(sen[: sen.index(batch_loader.end_token)])
                         else:
-                            print("generate sentence:     " + sen)
+                            # print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
         
-    #     scores = get_evaluation_scores(hyp__, ref_)
-    #     meteor_result.append(statistics.mean(scores["METEOR"]))
-    #     blue_result.append(statistics.mean(scores["BLUE"]))
-    #     rouge_result.append(statistics.mean(scores["ROUGE"]))
-    #     ter_result.append(statistics.mean(scores["TER"]))
-    #     muse_result.append(statistics.mean(scores["MUSE"]))
+        scores = get_evaluation_scores(hyp__, ref_)
+        meteor_result.append(statistics.mean(scores["METEOR"]))
+        blue_result.append(statistics.mean(scores["BLUE"]))
+        rouge_result.append(statistics.mean(scores["ROUGE"]))
+        ter_result.append(statistics.mean(scores["TER"]))
+        muse_result.append(statistics.mean(scores["MUSE"]))
         
-    #     meteor_result_std.append(statistics.variance(scores["METEOR"]))
-    #     blue_result_std.append(statistics.variance(scores["BLUE"]))
-    #     rouge_result_std.append(statistics.variance(scores["ROUGE"]))
-    #     ter_result_std.append(statistics.variance(scores["TER"]))
-    #     muse_result_std.append(statistics.variance(scores["MUSE"]))
+        meteor_result_std.append(statistics.variance(scores["METEOR"]))
+        blue_result_std.append(statistics.variance(scores["BLUE"]))
+        rouge_result_std.append(statistics.variance(scores["ROUGE"]))
+        ter_result_std.append(statistics.variance(scores["TER"]))
+        muse_result_std.append(statistics.variance(scores["MUSE"]))
     
-    # np.save(save_path + f"/meteor_result.npy", np.array(meteor_result))
-    # np.save(save_path + f"/blue_result.npy", np.array(blue_result))
-    # np.save(save_path + f"/rouge_result.npy", np.array(rouge_result))
-    # np.save(save_path + f"/ter_result.npy", np.array(ter_result))
-    # np.save(save_path + f"/muse_result.npy", np.array(muse_result))
+    np.save(save_path + f"/meteor_result.npy", np.array(meteor_result))
+    np.save(save_path + f"/blue_result.npy", np.array(blue_result))
+    np.save(save_path + f"/rouge_result.npy", np.array(rouge_result))
+    np.save(save_path + f"/ter_result.npy", np.array(ter_result))
+    np.save(save_path + f"/muse_result.npy", np.array(muse_result))
 
-    # np.save(save_path + f"/meteor_result_std.npy", np.array(meteor_result_std))
-    # np.save(save_path + f"/blue_result_std.npy", np.array(blue_result_std))
-    # np.save(save_path + f"/rouge_result_std.npy", np.array(rouge_result_std))
-    # np.save(save_path + f"/ter_result_std.npy", np.array(ter_result_std))
-    # np.save(save_path + f"/muse_result_std.npy", np.array(muse_result_std))
+    np.save(save_path + f"/meteor_result_std.npy", np.array(meteor_result_std))
+    np.save(save_path + f"/blue_result_std.npy", np.array(blue_result_std))
+    np.save(save_path + f"/rouge_result_std.npy", np.array(rouge_result_std))
+    np.save(save_path + f"/ter_result_std.npy", np.array(ter_result_std))
+    np.save(save_path + f"/muse_result_std.npy", np.array(muse_result_std))
 
     
