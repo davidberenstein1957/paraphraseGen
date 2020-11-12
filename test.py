@@ -147,7 +147,6 @@ if __name__ == "__main__":
     rouge_result_std = []
     ter_result_std = []
     muse_result_std = []
-    print(range(1, int(120000 / 10000)+1)
     for i in range(1, int(120000 / 10000)+1):
         model_state = i * coef_modulo
         # model_state = 10000
