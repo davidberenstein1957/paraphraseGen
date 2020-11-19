@@ -251,7 +251,7 @@ class RVAE(nn.Module):
             if self.params.wae:
                 loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
             else:
-                loss = 121 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+                loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
             optimizer.zero_grad()  # 标准用法先计算损失函数值，然后初始化梯度为0，
             loss.backward()  # 然后反向传递
