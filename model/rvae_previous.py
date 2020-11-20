@@ -153,8 +153,8 @@ class RVAE(nn.Module):
 
         # What to do with this decoder input ? --> Slightly resolved
         decoder_input_2 = self.embedding_2.word_embed(decoder_word_input_2)
-        if context_ is not None:
-            decoder_input_2 = t.ones(decoder_input_2.size()).cuda()
+        # if context_ is not None:
+        #     decoder_input_2 = t.ones(decoder_input_2.size()).cuda()
         out, final_state = self.decoder(decoder_input_2, z_tilda, drop_prob, enc_out_paraphrase, state_original) 
                 
         return out, final_state, kld, mu, None
