@@ -250,6 +250,8 @@ class RVAE(nn.Module):
             
             if self.params.wae:
                 loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
+            elif self.params.hrvae:
+                loss = 1 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
             else:
                 loss = 79 * cross_entropy + coef * kld  # 79应该是作者拍脑袋的
 
