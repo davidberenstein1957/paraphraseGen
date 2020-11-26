@@ -17,6 +17,8 @@ install = "*"
 nltk = "*"
 ipykernel = "*"
 pycocotools = "*"
+plotnine = "*"
+matplotlib = "*"
 
 [requires]
 python_version = "3.7"
