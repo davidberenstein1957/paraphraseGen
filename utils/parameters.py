@@ -11,6 +11,7 @@ class Parameters:
         attn_model: bool,
         res_model: bool,
         hrvae: bool,
+        wae: bool,
     ):
         """
         [summary] initializes structural/architectural model parameters
@@ -42,3 +43,4 @@ class Parameters:
         self.attn_model = attn_model
         self.res_model = res_model
         self.hrvae = hrvae
+        self.wae = wae

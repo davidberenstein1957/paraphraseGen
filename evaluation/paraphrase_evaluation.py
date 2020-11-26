@@ -9,8 +9,7 @@ from nltk.translate.meteor_score import meteor_score
 from numpy import dot
 from numpy.linalg import norm
 from rouge import Rouge
-tf.enable_eager_execution()
-
+tf.enable_eager_execution() 
 
 
 def get_evaluation_scores(hypothesis: List[List[str]], reference: List[str]) -> dict:

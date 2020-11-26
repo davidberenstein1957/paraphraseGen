@@ -35,6 +35,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
+    parser.add_argument("--wae", type=bool, default=False)
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
 
@@ -56,11 +57,13 @@ if __name__ == "__main__":
         save_path = os.path.join(save_path, 'stacked')
     elif args.embeddings_name == 'both':
         save_path = os.path.join(save_path, 'word2vec')
+    elif args.wae:
+        save_path = os.path.join(save_path, 'wae')
     elif args.hrvae:
         save_path = os.path.join(save_path, 'hrvae')
-    elif args.annealing:
+    elif args.annealing == 'cyc':
         save_path = os.path.join(save_path, 'cyclical')
-    elif args.annealing:
+    elif args.adam:
         save_path = os.path.join(save_path, 'adam')
     else:
         save_path = os.path.join(save_path, 'base')
@@ -101,6 +104,7 @@ if __name__ == "__main__":
         args.embeddings_name,
         args.res_model,
         args.hrvae,
+        args.wae,
     )
 
     """ =================== Doing the same for encoder-2 ===============================================
@@ -131,6 +135,7 @@ if __name__ == "__main__":
         args.embeddings_name,
         args.res_model,
         args.hrvae,
+        args.wae,
     )
     """=================================================================================================
     """
@@ -170,6 +175,7 @@ if __name__ == "__main__":
     else:
         args.num_iterations = (int(args.num_iterations / coef_modulo) + 1) * coef_modulo
 
+    print(save_path)
     for iteration in range(args.num_iterations):
         start_index = (start_index + args.batch_size) % (modulo_operator)
 
@@ -181,6 +187,9 @@ if __name__ == "__main__":
             coef = 1
 
         cross_entropy, kld, _ = train_step(coef, args.batch_size, args.use_cuda, args.dropout, start_index)
+
+        ce_result.append(cross_entropy.data.cpu().numpy())
+        kld_result.append(kld.data.cpu().numpy() * coef)
 
         if ((iteration % int(sample_modulo) == 0)) & (iteration != 0):
             print("\n")
@@ -241,9 +250,8 @@ if __name__ == "__main__":
 
                     hyp_.append(hyp)
 
-            ce_result.append(cross_entropy.data.cpu().numpy())
-            kld_result.append(kld.data.cpu().numpy() * coef)
+            
     iteration += 1
-    t.save(rvae.state_dict(), save_path + f"trained_RVAE{iteration}")
-    np.save(save_path + f"ce_result.npy".format(args.ce_result), np.array(ce_result))
-    np.save(save_path + f"kld_result_npy".format(args.kld_result), np.array(kld_result))
+    t.save(rvae.state_dict(), save_path + f"/trained_RVAE_{iteration}")
+    np.save(save_path + f"/ce_result.npy".format(args.ce_result), np.array(ce_result))
+    np.save(save_path + f"/kld_result.npy".format(args.kld_result), np.array(kld_result))
