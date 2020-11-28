@@ -36,6 +36,8 @@ if __name__ == "__main__":
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
     parser.add_argument("--wae", type=bool, default=False)
+    parser.add_argument("--optimal", type=bool, default=False)
+
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
 
@@ -53,7 +55,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.res_model:
+    if args.optimal:
+        save_path = os.path.join(save_path, 'optimal')
+    elif args.res_model:
         save_path = os.path.join(save_path, 'stacked')
     elif args.embeddings_name == 'both':
         save_path = os.path.join(save_path, 'word2vec')
