@@ -38,22 +38,29 @@ if __name__ == "__main__":
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--test-file", type=str, default="final")  # quora, coco, both
 
-    if parser.parse_args().test_type == "final":
-        parser.add_argument(
-            "--test-file",
-            type=str,
-            default=path + f"data/test_{parser.parse_args().data_name}.txt",
-            metavar="NS",
-            help="test file path (default: data/test.txt)",
-        )
-    else:
-        parser.add_argument(
-            "--test-file",
-            type=str,
-            default=path + f"data/test_final_{parser.parse_args().data_name}.txt",
-            metavar="NS",
-            help="test file path (default: data/test.txt)",
-        )
+    # if parser.parse_args().test_type == "final":
+    #     parser.add_argument(
+    #         "--test-file",
+    #         type=str,
+    #         default=path + f"data/test_{parser.parse_args().data_name}.txt",
+    #         metavar="NS",
+    #         help="test file path (default: data/test.txt)",
+    #     )
+    # else:
+    #     parser.add_argument(
+    #         "--test-file",
+    #         type=str,
+    #         default=path + f"data/test_final_{parser.parse_args().data_name}.txt",
+    #         metavar="NS",
+    #         help="test file path (default: data/test.txt)",
+    #     )
+    parser.add_argument(
+        "--test-file",
+        type=str,
+        default=path + f"data/test_final_{parser.parse_args().data_name}.txt",
+        metavar="NS",
+        help="test file path (default: data/test.txt)",
+    )
 
     args = parser.parse_args()
 
