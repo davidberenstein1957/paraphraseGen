@@ -54,13 +54,13 @@ if __name__ == "__main__":
             metavar="NS",
             help="test file path (default: data/test.txt)",
         )
-    parser.add_argument(
-        "--test-file",
-        type=str,
-        default=path + "data/test_final_"+parser.parse_args().data_name+".txt",
-        metavar="NS",
-        help="test file path (default: data/test.txt)"
-    )
+    # parser.add_argument(
+    #     "--test-file",
+    #     type=str,
+    #     default=path + "data/test_final_"+parser.parse_args().data_name+".txt",
+    #     metavar="NS",
+    #     help="test file path (default: data/test.txt)"
+    # )
 
     args = parser.parse_args()
 
