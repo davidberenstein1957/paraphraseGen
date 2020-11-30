@@ -1,8 +1,8 @@
 import argparse
 import os
+import random
 import statistics
 import time
-import random
 
 import numpy as np
 import torch as t
@@ -40,38 +40,44 @@ if __name__ == "__main__":
 
     if parser.parse_args().test_type == "final":
         parser.add_argument(
-            "--test-file", type=str, default=path + f'data/test_{parser.parse_args().data_name}.txt', metavar="NS", help="test file path (default: data/test.txt)"
+            "--test-file",
+            type=str,
+            default=path + f"data/test_{parser.parse_args().data_name}.txt",
+            metavar="NS",
+            help="test file path (default: data/test.txt)",
         )
     else:
         parser.add_argument(
-            "--test-file", type=str, default=path + f'data/test_final_{parser.parse_args().data_name}.txt', metavar="NS", help="test file path (default: data/test.txt)"
+            "--test-file",
+            type=str,
+            default=path + f"data/test_final_{parser.parse_args().data_name}.txt",
+            metavar="NS",
+            help="test file path (default: data/test.txt)",
         )
-    # parser.add_argument(
-    #     "--test-file", type=str, default=path + f"data/test_final_{parser.parse_args().data_name}.txt", metavar="NS", help="test file path (default: data/test.txt)"
-    # )
+
     args = parser.parse_args()
 
     if args.res_model:
-        save_path = os.path.join(save_path, 'stacked')
-    elif args.embeddings_name == 'both':
-        save_path = os.path.join(save_path, 'word2vec')
+        save_path = os.path.join(save_path, "stacked")
+    elif args.embeddings_name == "both":
+        save_path = os.path.join(save_path, "word2vec")
     elif args.wae:
-        save_path = os.path.join(save_path, 'wae')
+        save_path = os.path.join(save_path, "wae")
     elif args.hrvae:
-        save_path = os.path.join(save_path, 'hrvae')
-    elif args.annealing == 'cyc':
-        save_path = os.path.join(save_path, 'cyclical')
+        save_path = os.path.join(save_path, "hrvae")
+    elif args.annealing == "cyc":
+        save_path = os.path.join(save_path, "cyclical")
     elif args.adam:
-        save_path = os.path.join(save_path, 'adam')
+        save_path = os.path.join(save_path, "adam")
     else:
-        save_path = os.path.join(save_path, 'base')
+        save_path = os.path.join(save_path, "base")
 
-    if args.data_name == 'quora':
-        save_path = os.path.join(save_path, 'quora')
-    elif args.data_name == 'coco':
-        save_path = os.path.join(save_path, 'coco')
+    if args.data_name == "quora":
+        save_path = os.path.join(save_path, "quora")
+    elif args.data_name == "coco":
+        save_path = os.path.join(save_path, "coco")
     else:
-        save_path = os.path.join(save_path, 'both')
+        save_path = os.path.join(save_path, "both")
 
     str = ""
     if not args.use_file:
@@ -83,10 +89,16 @@ if __name__ == "__main__":
     """ ================================= BatchLoader loading ===============================================
     """
     data_files = [args.test_file]
-   
-    idx_files = [path + f"data/words_vocab_{args.embeddings_name}.pkl", path + f"data/characters_vocab_{args.embeddings_name}.pkl"]
 
-    tensor_files = [[path + f"data/test_word_tensor_{args.embeddings_name}.npy"], [path + f"data/test_character_tensor_{args.embeddings_name}.npy"]]
+    idx_files = [
+        path + f"data/words_vocab_{args.embeddings_name}.pkl",
+        path + f"data/characters_vocab_{args.embeddings_name}.pkl",
+    ]
+
+    tensor_files = [
+        [path + f"data/test_word_tensor_{args.embeddings_name}.npy"],
+        [path + f"data/test_character_tensor_{args.embeddings_name}.npy"],
+    ]
 
     preprocessor = PreProcessor(idx_files)
     preprocessor.preprocess_data(data_files, idx_files, tensor_files, args.use_file, str)
@@ -107,9 +119,15 @@ if __name__ == "__main__":
     """
     data_files = [path + f"data/super/train_{args.data_name}_2.txt"]
 
-    idx_files = [path + f"data/super/words_vocab_{args.embeddings_name}_2.pkl", path + f"data/super/characters_vocab_{args.embeddings_name}_2.pkl"]
+    idx_files = [
+        path + f"data/super/words_vocab_{args.embeddings_name}_2.pkl",
+        path + f"data/super/characters_vocab_{args.embeddings_name}_2.pkl",
+    ]
 
-    tensor_files = [[path + f"data/super/train_word_tensor_{args.embeddings_name}_2.npy"], [path + f"data/super/train_character_tensor_{args.embeddings_name}_2.npy"]]
+    tensor_files = [
+        [path + f"data/super/train_word_tensor_{args.embeddings_name}_2.npy"],
+        [path + f"data/super/train_character_tensor_{args.embeddings_name}_2.npy"],
+    ]
     batch_loader_2 = BatchLoader(data_files, idx_files, tensor_files)
     parameters_2 = Parameters(
         batch_loader_2.max_word_len,
@@ -170,10 +188,10 @@ if __name__ == "__main__":
         ref_ = []
         for j in range(2):
             # j = random.randint(0, len(data))
-            ref_.append(data[j].replace('\n', ''))
+            ref_.append(data[j].replace("\n", ""))
             print(data[j])
             hyp_ = []
-            
+
             for iteration in range(args.num_sample):
                 seed = Variable(t.randn([1, parameters.latent_variable_size]))
                 seed = seed.cuda()
@@ -192,20 +210,20 @@ if __name__ == "__main__":
                             print("generate sentence:     " + sen)
                             hyp_.append(sen)
             hyp__.append(hyp_)
-        
+
         # scores = get_evaluation_scores(hyp__, ref_)
         # meteor_result.append(statistics.mean(scores["METEOR"]))
         # blue_result.append(statistics.mean(scores["BLUE"]))
         # rouge_result.append(statistics.mean(scores["ROUGE"]))
         # ter_result.append(statistics.mean(scores["TER"]))
         # muse_result.append(statistics.mean(scores["MUSE"]))
-        
+
         # meteor_result_std.append(statistics.variance(scores["METEOR"]))
         # blue_result_std.append(statistics.variance(scores["BLUE"]))
         # rouge_result_std.append(statistics.variance(scores["ROUGE"]))
         # ter_result_std.append(statistics.variance(scores["TER"]))
         # muse_result_std.append(statistics.variance(scores["MUSE"]))
-    
+
     # np.save(save_path + f"/meteor_result.npy", np.array(meteor_result))
     # np.save(save_path + f"/blue_result.npy", np.array(blue_result))
     # np.save(save_path + f"/rouge_result.npy", np.array(rouge_result))
@@ -217,5 +235,3 @@ if __name__ == "__main__":
     # np.save(save_path + f"/rouge_result_std.npy", np.array(rouge_result_std))
     # np.save(save_path + f"/ter_result_std.npy", np.array(ter_result_std))
     # np.save(save_path + f"/muse_result_std.npy", np.array(muse_result_std))
-
-    
