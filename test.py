@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--wae", type=bool, default=False)
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
-    parser.add_argument("--test-file", type=str, default="final")  # quora, coco, both
+    parser.add_argument("--test-type", type=str, default="final")  # quora, coco, both
 
     if parser.parse_args().test_type == "final":
         parser.add_argument(
