@@ -1,3 +1,9 @@
 annotations/
 .npy
 *.npy
+.png
+*.png
+.DS_Store
+*.DS_Store
+.zip
+*.zip
