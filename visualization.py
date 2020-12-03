@@ -8,11 +8,20 @@ import os
 
 
 def run():
-    for model_type in ["base", "adam", "cyclical", "hrvae", "wae", "stacked"]:
-        for data_type in ["quora", "coco"]:
-            path = os.path.join("evaluation", "data", model_type, data_type)
-            make_loss_plots(path)
-            make_metric_plot(path, "")
+    path = os.path.join("evaluation", "data", "cyclical", "quora")
+    make_loss_plots(path)
+    make_metric_plot(path, "")
+    # for model_type in ["base", "adam", "cyclical", "wae"]:
+    #     for data_type in ["quora", "coco"]:
+    #         path = os.path.join("evaluation", "data", model_type, data_type)
+    #         make_loss_plots(path)
+    #         make_metric_plot(path, "")
+    # make_metric_plot(path, "_std")
+    # for model_type in ["base", "adam", "cyclical", "hrvae", "wae", "stacked"]:
+    #     for data_type in ["quora", "coco"]:
+    #         path = os.path.join("evaluation", "data", model_type, data_type)
+    #         make_loss_plots(path)
+    #         make_metric_plot(path, "")
 
 
 def make_loss_plots(path):
@@ -20,14 +29,18 @@ def make_loss_plots(path):
     data_kld = np.load(os.path.join(path, "kld_result.npy"))
     data_ce = np.load(os.path.join(path, "ce_result.npy"))
     df_loss = pd.DataFrame(list(zip(data_ce, data_kld)), columns=["ce_loss", "kld_loss"])
-    df_loss["iteration"] = df_loss.index * 1000 + 1000
-    df_loss = df_loss[df_loss["iteration"] <= 120000]
+
+    df_loss["iteration"] = df_loss.index + 1
+    df_loss = df_loss[df_loss["iteration"] % 1000 == 0]
 
     fig, ax1 = plt.subplots()
 
     ax2 = ax1.twinx()
+
     x = ax1.plot(df_loss["iteration"], df_loss["ce_loss"], "--", color="black", label="CE loss")
     y = ax2.plot(df_loss["iteration"], df_loss["kld_loss"], "-", color="black", label="KL loss")
+    # ax2.set_yticks(np.linspace(ax2.get_yticks()[0], ax2.get_yticks()[-1], len(ax1.get_yticks())))
+    # ax2.grid(None)
 
     ax1.set_xlabel("iteration")
     ax1.set_ylabel("Cross Entropy (CE) loss")
@@ -36,6 +49,7 @@ def make_loss_plots(path):
     plt.title(f"Model Loss Evaluation Metrics: {partial[-2]} {partial[-1]}")
     lns = x + y
     labs = [l.get_label() for l in lns]
+
     plt.legend(lns, labs, bbox_to_anchor=(1.04, 1), loc="upper left")
     plt.savefig(os.path.join("/".join(partial[:-1]), f"loss_values_{partial[-2]}_{partial[-1]}"), bbox_inches="tight")
     plt.clf()
@@ -73,6 +87,6 @@ def make_metric_plot(path, metric_type):
     print(df_eval[["blue", "muse", "meteor", "rouge"]].max(), df_eval[["ter"]].min())
 
 
-if __name__ == "main":
-    run()
+# if __name__ == "main":
+run()
 # make_metric_plot(path, '_std')
