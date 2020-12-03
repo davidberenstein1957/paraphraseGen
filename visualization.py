@@ -8,7 +8,7 @@ import os
 
 
 def run():
-    path = os.path.join("evaluation", "data", "cyclical", "quora")
+    path = os.path.join("evaluation", "data", "hrvae", "coco")
     make_loss_plots(path)
     make_metric_plot(path, "")
     # for model_type in ["base", "adam", "cyclical", "wae"]:
@@ -64,6 +64,8 @@ def make_metric_plot(path, metric_type):
     data_meteor = np.load(os.path.join(path, f"meteor_result{metric_type}.npy"))
     data_rouge = np.load(os.path.join(path, f"rouge_result{metric_type}.npy"))
     df_eval = pd.DataFrame(list(zip(data_blue, data_ter, data_muse, data_meteor, data_rouge)), columns=eval_types)
+    df_eval = df_eval.clip(0, 1)
+    print(df_eval)
     df_eval_start = pd.DataFrame([[0, 1, 0, 0, 0]], columns=eval_types)
     df_eval["iteration"] = df_eval.index * 10000 + 10000
     df_eval_start["iteration"] = df_eval_start.index
