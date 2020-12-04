@@ -33,7 +33,8 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
-    parser.add_argument("--wae", type=bool, default=False)    parser.add_argument("--optimal", type=bool, default=False)
+    parser.add_argument("--wae", type=bool, default=False)    
+    parser.add_argument("--optimal", type=bool, default=False)
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--test-type", type=str, default="final")  # quora, coco, both
