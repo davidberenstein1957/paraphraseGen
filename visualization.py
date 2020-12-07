@@ -8,7 +8,7 @@ import os
 
 
 def run():
-    path = os.path.join("evaluation", "data", "hrvae", "coco")
+    path = os.path.join("evaluation", "data", "optimal", "quora")
     make_loss_plots(path)
     make_metric_plot(path, "")
     # for model_type in ["base", "adam", "cyclical", "wae"]:
