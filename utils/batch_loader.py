@@ -79,10 +79,11 @@ class BatchLoader:
         self.idx_files = idx_files
         self.tensor_files = tensor_files
 
-        self.blind_symbol = ""
-        self.pad_token = "_"
-        self.go_token = "<"
-        self.end_token = ">"
+        self.blind_symbol = ''
+        self.pad_token = '_'
+        self.go_token = '>'
+        self.end_token = '|'
+        self.a_token = '?'
 
         idx_exists = fold(f_and, [os.path.exists(file) for file in self.idx_files], True)
 
