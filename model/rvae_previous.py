@@ -138,7 +138,7 @@ class RVAE(nn.Module):
                         q = t.distributions.Normal(mu_[i], t.ones(logvar.size()).cuda())
                         kld += t.sum(t.distributions.kl_divergence(p, q))
                     kld = kld / len(mu_)
-                    wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+                    wasserstein_loss = - self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
                     kld = 0.01 * kld + 10 * wasserstein_loss
                 else:
                     z_tilda = self.sample_z_tilda_from_posterior(z_sampled, logvar_[-1], mu_[-1], 0.5).cuda()
@@ -161,7 +161,7 @@ class RVAE(nn.Module):
                     p = t.distributions.Normal(mu, t.exp(logvar))
                     q = t.distributions.Normal(mu, t.ones(logvar.size()).cuda())
                     kld = t.sum(t.distributions.kl_divergence(p, q))
-                    wasserstein_loss = self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
+                    wasserstein_loss = - self.imq_kernel(z_sampled, z_tilda, self.params.latent_variable_size)
                     kld = 0.01 * kld + 10 * wasserstein_loss
                 else:
                     z_tilda = self.sample_z_tilda_from_posterior(z_sampled, logvar, mu, 0.5).cuda()
