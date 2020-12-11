@@ -1,6 +1,4 @@
 annotations/
-.npy
-*.npy
 .png
 *.png
 .DS_Store
