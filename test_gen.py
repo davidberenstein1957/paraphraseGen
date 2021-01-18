@@ -22,7 +22,7 @@ if __name__ == "__main__":
     path = "paraphraseGen/"
     parser = argparse.ArgumentParser(description="Sampler")
     parser.add_argument("--use-cuda", type=bool, default=True, metavar="CUDA", help="use cuda (default: True)")
-    parser.add_argument("--num-sample", type=int, default=5, metavar="NS", help="num samplings (default: 5)")
+    parser.add_argument("--num-sample", type=int, default=20, metavar="NS", help="num samplings (default: 5)")
     parser.add_argument("--num-sentence", type=int, default=10, metavar="NS", help="num samplings (default: 10)")
     parser.add_argument("--beam-top", type=int, default=1, metavar="NS", help="beam top (default: 1)")
     parser.add_argument("--beam-size", type=int, default=100, metavar="NS", help="beam size (default: 10)")
@@ -196,7 +196,7 @@ if __name__ == "__main__":
 
         hyp__ = []
         ref_ = []
-        for j in range(len(data[:2])):
+        for j in range(len(data)):
             # j = random.randint(0, len(data))
             ref_.append(data[j].replace("\n", ""))
             
