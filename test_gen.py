@@ -33,6 +33,7 @@ if __name__ == "__main__":
     parser.add_argument("--use-trained", type=bool, default=False)
     parser.add_argument("--attn-model", type=bool, default=False)
     parser.add_argument("--res-model", type=bool, default=False)
+    parser.add_argument("--optimal", type=bool, default=False)    
     parser.add_argument("--wae", type=bool, default=False)
     parser.add_argument("--data-name", type=str, default="quora")  # quora, coco, both
     parser.add_argument("--embeddings-name", type=str, default="quora")  # quora, coco, both
@@ -64,10 +65,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.res_model:
+    if args.optimal:
+        save_path = os.path.join(save_path, 'optimal')
+    elif args.res_model:
         save_path = os.path.join(save_path, "stacked")
-    elif args.embeddings_name == "both":
-        save_path = os.path.join(save_path, "word2vec")
     elif args.wae:
         save_path = os.path.join(save_path, "wae")
     elif args.hrvae:
@@ -180,7 +181,7 @@ if __name__ == "__main__":
     ter_result_std = []
     muse_result_std = []
     # for i in range(1, int(120000 / 10000)+1):
-
+    intent_set = set()
     for i in range(1):
         # model_state = i * coef_modulo
         model_state = 120000
@@ -191,32 +192,39 @@ if __name__ == "__main__":
         print(f"Time elapsed in loading model {model_state} =", loading_time)
         print("Finished loading")
 
+        gen_file = open('/content/drive/My Drive/thesis/results/' + f'gen_{args.data_name}.txt', 'w')
+
         hyp__ = []
         ref_ = []
-        for j in range(2):
+        for j in range(len(data[:2])):
             # j = random.randint(0, len(data))
             ref_.append(data[j].replace("\n", ""))
+            
+            gen_file.write('## intent: '+ref_[-1]+'\n')
             print(data[j])
             hyp_ = []
+            if ref_[-1] not in intent_set:
+                for iteration in range(args.num_sample):
+                    intent_set.add(ref_[-1])
+                    seed = Variable(t.randn([1, parameters.latent_variable_size]))
+                    seed = seed.cuda()
 
-            for iteration in range(args.num_sample):
-                seed = Variable(t.randn([1, parameters.latent_variable_size]))
-                seed = seed.cuda()
+                    results, scores = rvae.sampler(
+                        batch_loader, batch_loader_2, 50, seed, args.use_cuda, j, beam_size, n_best
+                    )
 
-                results, scores = rvae.sampler(
-                    batch_loader, batch_loader_2, 50, seed, args.use_cuda, j, beam_size, n_best
-                )
-
-                for tt in results:
-                    for k in range(n_best):
-                        sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
-                        if batch_loader.end_token in sen:
-                            print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
-                            hyp_.append(sen[: sen.index(batch_loader.end_token)])
-                        else:
-                            print("generate sentence:     " + sen)
-                            hyp_.append(sen)
-            hyp__.append(hyp_)
+                    for tt in results:
+                        for k in range(n_best):
+                            sen = " ".join([batch_loader_2.decode_word(x[k]) for x in tt])
+                            if batch_loader.end_token in sen:
+                                print("generate sentence:     " + sen[: sen.index(batch_loader.end_token)])
+                                hyp_.append(sen[: sen.index(batch_loader.end_token)])
+                            else:
+                                print("generate sentence:     " + sen)
+                                hyp_.append(sen)
+                            gen_file.write(hyp_[-1].replace('_', '').strip() + '\n')
+                gen_file.write('\n')
+                hyp__.append(hyp_)
 
         # scores = get_evaluation_scores(hyp__, ref_)
         # meteor_result.append(statistics.mean(scores["METEOR"]))
